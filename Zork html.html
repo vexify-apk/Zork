@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+<title>Zork 2 - Parchment</title>
+<style>
+  :root{
+    --paper:#000000;
+    --paper-edge:#000000;
+    --ink:#ffffff;
+    --ink-soft:#ffffff;
+    --rule:#ffffff;
+    --accent:#ffffff;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    background:#000000;
+    background-image:
+      radial-gradient(ellipse at top, #000000 0%, #000000 60%, #000000 100%);
+    font-family:Georgia,'Times New Roman',serif;
+    color:var(--ink);
+  }
+  #page{
+    max-width:760px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--paper);
+    box-shadow:0 0 40px rgba(0,0,0,0.25);
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid var(--paper-edge);
+    border-right:1px solid var(--paper-edge);
+  }
+  header{
+    padding:18px 28px 10px 28px;
+    border-bottom:1px solid var(--rule);
+  }
+  header h1{
+    font-size:1.4em;
+    margin:0;
+    font-weight:normal;
+    letter-spacing:0.04em;
+    color:var(--ink);
+  }
+  header .byline{
+    font-size:0.78em;
+    color:var(--ink-soft);
+    font-style:italic;
+    margin-top:2px;
+  }
+  #output{
+    flex:1;
+    padding:20px 28px 30px 28px;
+    font-size:1.05em;
+    line-height:1.55;
+    overflow-y:auto;
+    white-space:pre-wrap;
+  }
+  #output p{
+    margin:0 0 0.85em 0;
+  }
+  #output p.cmdline{
+    color:var(--accent);
+    font-weight:bold;
+  }
+  #output p.sys{
+    color:var(--ink-soft);
+    font-style:italic;
+  }
+  .input-row{
+    display:flex;
+    align-items:baseline;
+    margin:0 0 0.85em 0;
+  }
+  .prompt-inline{
+    font-weight:bold;
+    margin-right:6px;
+    color:var(--accent);
+    font-size:1.05em;
+    flex-shrink:0;
+  }
+  .cmd-input-inline{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:1.05em;
+    color:var(--ink);
+    caret-color:var(--accent);
+    padding:0;
+    margin:0;
+  }
+  #footer{
+    text-align:center;
+    font-size:0.72em;
+    color:var(--ink-soft);
+    padding:6px 0 14px 0;
+    border-top:1px solid var(--rule);
+  }
+  ::selection{ background:#d6cba5; color:#000; }
+  @media (max-width:600px){
+    header, #output, #footer{ padding-left:16px; padding-right:16px; }
+  }
+</style>
+</head>
+<body>
+<div id="page">
+  <header>
+    <h1>ZORK 2</h1>
+  </header>
+  <div id="output" role="log" aria-live="polite"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------------- */
+/* Low level output / input plumbing                                      */
+/* ---------------------------------------------------------------------- */
+
+const outputEl = document.getElementById('output');
+
+function scrollDown(){
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function printRaw(text, cls){
+  const lines = String(text).split("\n");
+  for(const line of lines){
+    const p = document.createElement('p');
+    if(cls) p.className = cls;
+    p.textContent = line.length ? line : "\u00A0";
+    outputEl.appendChild(p);
+  }
+  scrollDown();
+}
+
+function print(...parts){
+  printRaw(parts.join(" "));
+}
+
+function sys(text){
+  printRaw(text, 'sys');
+}
+
+async function sleep(ms){
+  return new Promise(r=>setTimeout(r, ms));
+}
+
+async function typewriter(text, delay=18){
+  const p = document.createElement('p');
+  outputEl.appendChild(p);
+  let buffer = "";
+  for(const ch of text){
+    buffer += ch;
+    p.textContent = buffer;
+    scrollDown();
+    if(ch === ":" || ch === "!"){
+      await sleep(260);
+    } else {
+      await sleep(delay);
+    }
+  }
+}
+
+// Creates a live input line INLINE in the transcript, right after whatever
+// was just printed - not pinned to the bottom of the page. Once the user
+// hits Enter, the live input is replaced with a plain echoed line and the
+// promise resolves with the typed value.
+function waitForInput(){ //-------------------------------------------------------------------------------------------------
+  return new Promise(resolve=>{
+    const row = document.createElement('div');
+    row.className = 'input-row';
+
+    const promptSpan = document.createElement('span');
+    promptSpan.className = 'prompt-inline';
+    promptSpan.textContent = '>';
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'cmd-input-inline';
+    inp.autocomplete = 'off';
+    inp.autocapitalize = 'off';
+    inp.spellcheck = false;
+
+    row.appendChild(promptSpan);
+    row.appendChild(inp);
+    outputEl.appendChild(row);
+    scrollDown();
+    inp.focus();
+
+    function commit(){
+      const val = inp.value;
+      inp.removeEventListener('keydown', onKey);
+      row.remove();
+      const p = document.createElement('p');
+      p.className = 'cmdline';
+      p.textContent = '> ' + val;
+      outputEl.appendChild(p);
+      scrollDown();
+      resolve(val);
+    }
+
+    function onKey(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        commit();
+      }
+    }
+    inp.addEventListener('keydown', onKey);
+
+    inp.addEventListener('blur', ()=>{
+      setTimeout(()=>{ if(document.body.contains(inp)) inp.focus(); }, 0);
+    });
+  });
+}
+
+// shorthand replicating python's input(promptText)
+async function input(promptText){
+  if(promptText) printRaw(promptText);
+  const v = await waitForInput();
+  return v;
+}
+
+/* small "thinking dots" animation, used for prisoner dialogue beats */
+async function dotCycle(label){
+  const p = document.createElement('p');
+  outputEl.appendChild(p);
+  const frames = [".  ", ".. ", "..."];
+  for(let i=0;i<6;i++){
+    p.textContent = label + frames[i % 3];
+    scrollDown();
+    await sleep(320);
+  }
+  outputEl.removeChild(p);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Game data                                                               */
+/* ---------------------------------------------------------------------- */
+
+const MAX_WEIGHT = 20;
+let row = 5, col = 0;
+let PlayerPos = [row, col];
+let PlayerInventory = [];
+let PlayerHealth = 100;
+let lost = 0;
+let stepCount = 0;
+let prisonerDialogueDone = false;
+let prisonerDialogueDone2 = false;
+const VisitedRooms = new Set();
+let williamMulti = 1.0;
+let williamWeapon = null;
+const startTime = Date.now();
+
+function key(r,c){ return r + "," + c; }
+
+const Maze = [
+  [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,1,1,3,3,1,0,0,0,0,0,0,0,1,0,1],
+  [1,9,1,0,0,0,1,3,3,1,0,1,1,0,1,1,0,1,5,1],
+  [1,0,1,1,1,0,1,1,0,1,3,1,3,3,1,1,0,0,0,1],
+  [1,0,0,3,1,0,1,0,0,1,1,1,3,3,1,1,0,1,1,1],
+  [0,0,1,1,1,0,1,5,1,1,1,1,0,1,1,1,0,0,0,1],
+  [1,1,1,0,1,0,1,0,1,1,0,0,0,0,0,1,9,1,0,1],
+  [1,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,1,0,1],
+  [1,5,1,1,1,0,1,0,1,1,1,1,0,1,1,1,1,1,1,1],
+  [1,0,1,0,0,0,1,0,1,3,5,9,0,1,3,3,1,0,0,0],
+  [1,8,1,1,0,1,1,0,1,6,3,1,1,1,3,3,1,0,1,1],
+  [1,0,1,1,0,1,3,0,1,1,1,1,1,1,0,1,1,0,1,1],
+  [1,0,0,1,0,1,1,0,0,1,1,1,0,0,0,1,0,0,0,1],
+  [1,1,0,1,5,1,1,1,0,0,5,0,0,1,1,1,0,1,0,1],
+  [1,7,0,1,0,1,1,1,1,1,1,1,1,1,0,0,0,1,0,1],
+  [1,1,0,1,0,1,0,1,3,1,0,0,0,1,1,1,1,1,0,1],
+  [1,0,0,1,0,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,0,1,0,1,1,0,0,1,9,1,3,1,3,1],
+  [1,0,0,0,0,1,0,1,0,0,0,0,1,1,3,1,1,1,1,1],
+  [1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+const RoomDescriptions = {};
+function rd(r,c,text){ RoomDescriptions[key(r,c)] = text; }
+
+rd(0,10,"You are at the north entrance of the maze, there is a wall to the west and east of you with a path going south");
+rd(19,4,"You are at the south entrance of the maze, there is a wall to the west and east of you with a path going north");
+rd(9,19,"You are at the east entrance of the maze, there is a wall to the north and south of you with a path going west");
+rd(5,0,"You are at the west entrance of the maze, there is a wall to the north and south of you with a path going east");
+
+rd(1,1,"There is a wall to the north and west of you with a path going east and you see a door to your south");
+rd(1,2,"There is a wall to the north and south of you with a path going east and west");
+rd(1,3,"There is a wall to the north and east of you with a path going south and west");
+rd(1,7,"There is a wall to the north and west of you with a path going south and east");
+rd(1,8,"There is a wall to the north and east of you with a path going south and west");
+rd(1,10,"There is s wall to your west but a long corridor to your east and you glimpse a candle light to your south and the exit of the maze to your north");
+rd(1,11,"There is a wall to the north and south of you with a path going east and west");
+rd(1,12,"There is a wall to the north and south of you with a path going east and west");
+rd(1,13,"There is a wall to the north of you with a path going east, and west and you can see a room to your south");
+rd(1,14,"There is a wall to the north and south of you with a path going east and west");
+rd(1,15,"There is a wall to the north and south of you with a path going east and west");
+rd(1,16,"There is a wall to the north and east of you with a long corridor going west and a path going south");
+rd(1,18,"You are at a dead end with a path only going south");
+rd(2,1,"There is a wall to the west and east of you with a path going north and south");
+rd(2,3,"There is a wall to the south and west of you with a path going north and east");
+rd(2,4,"There is a wall to the north and south of you with a path going east and west");
+rd(2,5,"There is a wall to the north and east of you with a path going west and you can see a never ending corridor going south");
+rd(2,6,"There is a wall to the north and south of you with a path going east and west");
+rd(2,7,"There is a wall to the south of you with a path going north, east, and west");
+rd(2,8,"There is a wall to the east of you with a path going north, south, and west");
+rd(2,10,"There is a wall to the west and east of you with a path going north and south");
+rd(2,13,"There is a wall to the west and east of you with a path going north and south");
+rd(2,16,"There is a wall to the west and east of you with a path going north and south");
+rd(2,18,"There is a wall to the west and east of you covered in the rats blood with a path going north and south");
+rd(3,1,"There is a wall to the west and east of you with a path going south and a you see a door to you north");
+rd(3,5,"There is a wall to the west and east of you with a path going north and south");
+rd(3,8,"There is a wall to the west and east of you with a path going north and south");
+rd(3,10,"There is a wall to the south, west, and east of you with a path going north");
+rd(3,12,"There is a wall to the north and west of you with a path going south and east");
+rd(3,13,"There is a wall to the east of you with a path going north, south, and west");
+rd(3,16,"There is a wall to the west of you with a path going north, south, and east");
+rd(3,17,"There is a wall to the north and south of you with a path going east and west");
+rd(3,18,"There is a wall to the south and east of you with a path west and you can see a rat to your north");
+rd(4,1,"There is a wall to the west of you with a path going north, south, and east");
+rd(4,2,"There is a wall to the north and south of you with a path going east and west");
+rd(4,3,"You are in a dark room with a table in the far corner with wall all around you apart from a path going west");
+rd(4,5,"There is a wall to the west and east of you with a path going north and south");
+rd(4,7,"There is a wall to the north and west of you with a path going south and east");
+rd(4,8,"There is a wall to the south and east of you with a path going north and west");
+rd(4,12,"There is a wall to the west of you with a path going north, south, and east");
+rd(4,13,"There is a wall to the south and east of you with a path going north and west");
+rd(4,16,"There is a wall to the west and east of you with a path going north and south");
+rd(5,1,"There is a wall to the south and east of you with a path going north and west");
+rd(5,5,"There is a wall to the west and east of you with a path going north and south");
+rd(5,7,"There is a wall to the west and east of you with a path going north and south");
+rd(5,12,"There is a wall to the west and east of you with a path going north and south");
+rd(5,16,"There is a wall to the west of you with a path going north and east while being met with a door to you north");
+rd(5,17,"There is a wall to the north and south of you with a path going east and west");
+rd(5,18,"There is a wall to the north and east of you with a path going south and west");
+rd(6,3,"There is a wall to the north, west, and east of you with a path going south");
+rd(6,5,"There is a wall to the west and east of you with a path going north and south");
+rd(6,7,"There is a wall to the west and east of you with a path going north and south");
+rd(6,10,"There is a wall to the north and west of you with a path going south and east");
+rd(6,11,"There is a wall to the north and south of you with a path going east and west");
+rd(6,13,"There is a wall to the north and south of you with a path going east and west");
+rd(6,14,"There is a wall to the north and east of you with a path going south and west");
+rd(6,16,"There is a wall to the west and east of you with a path going north and south");
+rd(6,18,"There is a wall to the west and east of you with a path going north and south");
+rd(7,1,"There is a wall to the north and west of you with a path going south and east");
+rd(7,2,"There is a wall to the north and south of you with a path going east and west");
+rd(7,3,"There is a wall to the south and east of you with a path going north and west");
+rd(7,5,"There is a wall to the west of you with a path going north, south, and east");
+rd(7,6,"There is a wall to the north and south of you with a path going east and west");
+rd(7,7,"You are at an intersection with paths going in all 4 directions, choose wisely");
+rd(7,8,"There is a wall to the north and south of you with a path going east and west");
+rd(7,9,"There is a wall to the north and south of you with a path going east and west");
+rd(7,10,"There is a wall to the south and east of you with a path going north and west");
+rd(7,12,"There is a wall to the west and east of you with a path going north and south");
+rd(7,14,"There is a wall to the south and west of you with a path going north and east");
+rd(7,15,"There is a wall to the north and south of you with a path going east and west");
+rd(7,16,"There is a wall to the south and east of you with a path west and you are met with a door to your north");
+rd(7,18,"There is a wall to the south, west, and east of you with a path going north");
+rd(8,1,"There is a wall to the west and east of you with a path going north and south");
+rd(8,5,"There is a wall to the west and east of you with a path going north and south");
+rd(8,7,"There is a wall to the west and east of you with a path going north and south");
+rd(8,12,"There is a wall to the west and east of you with a path going north and south");
+rd(9,1,"There is a wall to the west and east of you with a path going north and south");
+rd(9,3,"There is a wall to the north, south, and west of you with a path going east");
+rd(9,4,"There is a wall to the north of you with a path going south, east, and west");
+rd(9,5,"There is a wall to the east of you with a path going north, south, and west");
+rd(9,7,"There is a wall to the west and east of you with a path going north and south");
+rd(9,9,"There is a wall to the north and west of you with a path going south and east");
+rd(9,10,"There is a wall to the north of you with a path going south, east, and west");
+rd(9,11,"There is a wall to the north and south of you with a path going east and west");
+rd(9,12,"There is a wall to the south and east of you with a path going north and west");
+rd(9,14,"There is a wall to the north and west of you with a path going south and east");
+rd(9,15,"There is a wall to the north and east of you with a path going south and west");
+rd(9,17,"There is a wall to the north and west of you with a path going south and east");
+rd(9,18,"There is a wall to the north and south of you with a path going east and west");
+rd(10,1,"There is a wall to the west and east of you with a path going north and south");
+rd(10,4,"There is a wall to the west of you with a path going north, south, and east");
+rd(10,6,"There is a wall to the north of you with a path going south, east, and west");
+rd(10,7,"There is a wall to the east of you with a path going north, south, and west");
+rd(10,9,"You are at the very centre of the maze and you see a ladder leading to the surface");
+rd(10,10,"There is a wall to the south and east of you with a path going north and west");
+rd(10,14,"There is a wall to the west of you with a path going north, south, and east");
+rd(10,15,"There is a wall to the south of you with a path going north, east, and west");
+rd(10,16,"There is a wall to the north and south of you with a path going east and west");
+rd(10,17,"There is a wall to the east of you with a path going north, south, and west");
+rd(11,1,"There is a wall to the west and east of you with a path going south and mysterous man to your south.");
+rd(11,4,"There is a wall to the west of you with a path going north, south, and east");
+rd(11,5,"There is a wall to the south of you with a path going north, east, and west");
+rd(11,6,"There is a wall to the south of you with a path going north, east, and west");
+rd(11,7,"There is a wall to the east of you with a path going north, south, and west");
+rd(11,14,"There is a wall to the west and east of you with a path going north and south");
+rd(11,17,"There is a wall to the west and east of you with a path going north and south");
+rd(12,1,"There is a wall to the south and west of you with a path going north and east");
+rd(12,2,"There is a wall to the north and east of you with a path going south and west");
+rd(12,4,"There is a wall to the west and east of you with a path going north and south");
+rd(12,7,"There is a wall to the south and west of you with a path going north and east");
+rd(12,8,"There is a wall to the north and east of you with a path going south and west");
+rd(12,12,"There is a wall to the north and west of you with a path going south and east");
+rd(12,13,"There is a wall to the north and south of you with a path going east and west");
+rd(12,14,"There is a wall to the south and east of you with a path going north and west");
+rd(12,16,"There is a wall to the north and west of you with a path going south and east");
+rd(12,17,"There is a wall to the south of you with a path going north, east, and west");
+rd(12,18,"There is a wall to the north and east of you with a path going south and west");
+rd(13,2,"There is a wall to the west and east of you with a path going north and south");
+rd(13,4,"There is a wall to the west and east of you with a path going north and south");
+rd(13,8,"There is a wall to the south and west of you with a path going north and east");
+rd(13,9,"There is a wall to the north and south of you with a path going east and west");
+rd(13,10,"There is a wall to the north and south of you with a path going east and west");
+rd(13,11,"There is a wall to the north and south of you with a path going east and west");
+rd(13,12,"There is a wall to the south and east of you with a path going north and west");
+rd(13,16,"There is a wall to the west and east of you with a path going north and south");
+rd(13,18,"There is a wall to the west and east of you with a path going north and south");
+rd(14,1,"There is a wall to the north, south, and west of you with a path going east");
+rd(14,2,"There is a wall to the east of you with a path going north and south. You can see a cheerful merchant to your west.");
+rd(14,4,"There is a wall to the west and east of you with a path going north and south");
+rd(14,14,"There is a wall to the north, south, and west of you with a path going east");
+rd(14,15,"There is a wall to the north and south of you with a path going east and west");
+rd(14,16,"There is a wall to the south and east of you with a path going north and west");
+rd(14,18,"There is a wall to the west and east of you with a path going north and south");
+rd(15,2,"There is a wall to the west and east of you with a path going north and south");
+rd(15,4,"There is a wall to the west and east of you with a path going north and south");
+rd(15,6,"There is a wall to the north, west, and east of you with a path going south");
+rd(15,8,"There is a wall to the north, west, and east of you with a path going south");
+rd(15,10,"There is a wall to the north, south, and west of you with a path going east");
+rd(15,11,"There is a wall to the north and south of you with a path going east and west");
+rd(15,12,"There is a wall to the north and east of you with a path going south and west");
+rd(15,18,"There is a wall to the west and east of you with a path going north and south");
+rd(16,1,"There is a wall to the north and west of you with a path going south and east");
+rd(16,2,"There is a wall to the south and east of you with a path going north and west");
+rd(16,4,"There is a wall to the west of you with a path going north, south, and east");
+rd(16,5,"There is a wall to the north and south of you with a path going east and west");
+rd(16,6,"There is a wall to the east of you with a path going north, south, and west");
+rd(16,8,"There is a wall to the west and east of you with a path going north and south");
+rd(16,12,"There is a wall to the west of you with a path going north, south, and east");
+rd(16,13,"There is a wall to the north and south of you with a path going east and west");
+rd(16,14,"There is a wall to the north of you with a path going east, and west. You can see an old imprisoned man to your south.");
+rd(16,15,"There is a wall to the north and south of you with a path going east and west");
+rd(16,16,"There is a wall to the north of you with a path going south, east, and west");
+rd(16,17,"There is a wall to the north and south of you with a path going east and west");
+rd(16,18,"There is a wall to the east of you with a path going north, south, and west");
+rd(17,1,"There is a wall to the west and east of you with a path going north and south");
+rd(17,4,"There is a wall to the west and east of you with a path going north and south");
+rd(17,6,"There is a wall to the west and east of you with a path going north and south");
+rd(17,8,"There is a wall to the west and east of you with a path going north and south");
+rd(17,11,"There is a wall to the north and west of you with a path going south and east");
+rd(17,12,"There is a wall to the south and east of you with a path going north and west");
+rd(17,14,"There is a wall to the west and east of you with a path going north and south");
+rd(17,16,"There is a wall to the south, west, and east of you with a path going north");
+rd(17,18,"There is a wall to the south, west, and east of you with a path going north");
+rd(18,1,"There is a wall to the south and west of you with a path going north and east");
+rd(18,2,"There is a wall to the north and south of you with a path going east and west");
+rd(18,3,"There is a wall to the north and south of you with a path going east and west");
+rd(18,4,"There is a wall to the east of you with a path going north, south, and west");
+rd(18,6,"There is a wall to the south, west, and east of you with a path going north");
+rd(18,8,"There is a wall to the south and west of you with a path going north and east");
+rd(18,9,"There is a wall to the north and south of you with a path going east and west");
+rd(18,10,"There is a wall to the north and south of you with a path going east and west");
+rd(18,11,"There is a wall to the south and east of you with a path going north and west");
+rd(18,14,"There is a wall to the south, west, and east of you with a path going north");
+
+const RoomItems = {};
+function ri(r,c,items){ RoomItems[key(r,c)] = items.slice(); }
+ri(17,4,["rock"]);
+ri(1,14,["rock"]);
+ri(4,5,["rock"]);
+ri(4,1,["bread"]);
+ri(14,14,["bread"]);
+ri(11,6,["bread"]);
+ri(17,1,["coin"]);
+ri(3,10,["coin"]);
+ri(18,6,["gruel"]);
+ri(3,12,["gruel"]);
+ri(10,15,["gruel"]);
+ri(1,18,["cheese"]);
+ri(1,8,["bread","cheese"]);
+ri(9,14,["bread","bandage"]);
+ri(5,0,["letter"]);
+ri(15,10,["note"]);
+ri(17,18,["torn journal"]);
+ri(3,1,["sign"]);
+ri(9,12,["final sign"]);
+ri(2,1,["danger sign"]);
+ri(18,4,["crossroad sign"]);
+ri(12,17,["prison sign"]);
+ri(4,3,["brass key"]);
+ri(6,3,["gold key","bandage"]);
+ri(7,18,["copper key"]);
+ri(15,8,["iron key","coin"]);
+
+const Traps = {};
+Traps[key(11,3)] = {name:"dart", damage:5, description:"A dart shoots from the wall! ", one_time:true, triggered:false};
+Traps[key(3,15)] = {name:"pit trap", damage:25, description:"The floor gives way beneath you and you fall into a pit", one_time:true, triggered:false};
+Traps[key(16,10)] = {name:"spike trap", damage:30, description:"Sharp spikes spring up from the floor", one_time:true, triggered:false};
+Traps[key(1,2)] = {name:"bear trap", damage:0, description:"You stepped on a bear trap but it was old and rusty so you managed to lift your leg out of harms way", one_time:true, triggered:false};
+Traps[key(17,6)] = {name:"pebble launcher", damage:3, description:"Some fool thought it was a great idea to launch pebbles at passers by", one_time:true, triggered:false};
+
+function checkForTrap(r,c){
+  const pos = key(r,c);
+  const trap = Traps[pos];
+  if(!trap) return false;
+  if(trap.one_time && trap.triggered) return false;
+  trap.triggered = true;
+  PlayerHealth -= trap.damage;
+  print("");
+  print(trap.description);
+  print(`You took ${trap.damage} damage`);
+  print(`Health remaining: ${PlayerHealth} health`);
+  if(PlayerHealth <= 0){
+    print("");
+    print("The trap was fatal...");
+    PlayerHealth = 0;
+  }
+  return true;
+}
+
+const shop = {};
+shop[key(14,1)] = {
+  name:"Merchant",
+  greeting:"Ah, a customer! Welcome to trade?",
+  inventory:{gruel:1, cheese:2, bread:3, bandage:5},
+  buy_prices:{gruel:1, cheese:2, bread:3, bandage:5}
+};
+
+const enemies = {};
+enemies[key(9,10)] = {name:"Minotaur", description:"A fitting enemy for the labyrinth", dead:false, requirement:"You need >= 90 and a mace", loot:[]};
+enemies[key(8,1)] = {name:"Troll", description:"A troll with a mace in a maze", dead:false, requirement:"You need >= 70 and a sword", loot:["mace","coin","coin","coin","coin","coin"]};
+enemies[key(5,7)] = {name:"Brute", description:"A large (but rather dumb looking) beast holding a gleaming sword", dead:false, requirement:"You need >= 60 and a spear", loot:["sword","coin","coin","coin","coin"]};
+enemies[key(13,10)] = {name:"Goblin", description:"Human looking green man with a custom made spear", dead:false, requirement:"You need >= 50 and a rusty dagger", loot:["spear","coin","coin","coin"]};
+enemies[key(13,4)] = {name:"Skeleton", description:"A bony creature made of bones holding a beating up dagger", dead:false, requirement:"You need >= 50 and a rock", loot:["rusty dagger","coin","coin"]};
+enemies[key(2,18)] = {name:"Giant Rat", description:"A large pest the size of a panther", dead:false, requirement:"You need >= 40 and a rock", loot:["coin"]};
+
+const Doors = {};
+Doors[key(2,1)] = {locked:true, key_needed:"door_1", description:"A worn down door"};
+Doors[key(9,11)] = {locked:true, key_needed:"door_2", description:"A gold-reinforced door"};
+Doors[key(6,16)] = {locked:true, key_needed:"door_3", description:"A heavy wooden door"};
+Doors[key(17,14)] = {locked:true, key_needed:"door_4", description:"A iron prison cell that is holding a man captive"};
+
+const Items = {
+  "letter":{
+    description:"A crumpled letter with writing on it",
+    text:`
+                                WELCOME TO ZORK 2
+
+    ZORK 2 is a game of adventure, danger, and low cunning.  In it you will explore some of the most amazing territory ever seen by mortal man.  Hardened adventurers have run screaming from the terrors contained within!
+
+    In ZORK 2 the intrepid explorer (you) is stuck on the outside of a labyrinth deep in the bowels of the earth, searching for vast treasures long hidden from prying eyes, treasures guarded by fearsome monsters and diabolical traps!
+
+    To win, you must find the centre of the maze and escape through a ladder to reach the surfaceof the modern world.
+
+    ZORK 2 was created in my room by me (Aron).  It was inspired by the adventure game ZORK.
+
+    Information may be available using the HELP (shows how to play the game) and INFO (shows the list of commands in the game) commands.
+
+    (c) Copyright by Me?. Email | verify.exe101@gmail.com | if there are any bugs (probably a lot)
+                    All rights reserved.
+`,
+    grabbable:true, readable:true, weight:2
+  },
+  "note":{description:"A wrangled old note", text:"time", grabbable:true, readable:true, weight:1},
+  "torn journal":{
+    description:"A partially destroyed journal",
+    text:`
+        Day 47: The others are gone. I'm the last one left.
+        I think they left me here to die... they havent came with
+        food for the past 3 days, I am being made to die a slow death...
+        - Marcus
+        `,
+    grabbable:true, readable:true
+  },
+  "sign":{description:"A old wooden sign", text:"You need a brass key for this door", grabbable:false, readable:true, weight:0},
+  "crossroad sign":{description:"A old wooden sign", text:`
+=====================================
+            ADVERTISMENT
+=====================================
+    SHOP TOWARDS WEST OF THIS SIGN        
+`, grabbable:false, readable:true, weight:0},
+  "prison sign":{description:"A metal sign with letters etched into it", text:`
+=====================================
+            BEWARE
+=====================================
+    PRISONS EAST TO THIS SIGN        
+`, grabbable:false, readable:true, weight:0},
+  "danger sign":{description:"A warning sign", text:`
+===============================
+            DANGER
+            TRAPS
+===============================`, grabbable:false, readable:true, weight:0},
+  "final sign":{description:"The final sign", text:"Gold key needed for this door", grabbable:false, readable:true, weight:0},
+  "brass key":{description:"A worn down brass key", text:null, grabbable:true, readable:false, weight:3, opens:"door_1"},
+  "gold key":{description:"A shiny golden key, looks important", text:null, grabbable:true, readable:false, weight:3, opens:"door_2"},
+  "copper key":{description:"A cold copper key", text:null, grabbable:true, readable:false, weight:3, opens:"door_3"},
+  "iron key":{description:"A rusty iron key", text:null, grabbable:true, readable:false, weight:3, opens:"door_4"},
+  "mace":{description:"A mean looking mace with spikes coming out of it", text:null, grabbable:true, readable:false, weight:10},
+  "sword":{description:"A gleaming sword", text:null, grabbable:true, readable:false, weight:8},
+  "spear":{description:"A hardwood pole with a iron spike on the end", text:null, grabbable:true, readable:false, weight:7},
+  "rusty dagger":{description:"A dodgy looking dagger", text:null, grabbable:true, readable:false, weight:5},
+  "rock":{description:"A sharp rock that looks like it could do some damage", text:null, grabbable:true, readable:false, weight:3},
+  "bread":{description:"Some tasty but stale bread | Restores 30 health", text:null, grabbable:true, readable:false, weight:3},
+  "bandage":{description:"A nice length of bandage to heal bones and wounds | Restores 50 health", text:null, grabbable:true, readable:false, weight:5},
+  "cheese":{description:"Slightly mouldy cheese | Restores 20 health", text:null, grabbable:true, readable:false, weight:3},
+  "gruel":{description:"A small nasty looking bowl of gruel | Restores 10 health", text:null, grabbable:true, readable:false, weight:2},
+  "coin":{description:"A golden currency used to trade", text:null, grabbable:true, readable:false, weight:1}
+};
+
+function getInventoryWeight(){
+  let total = 0;
+  for(const item of PlayerInventory){
+    if(Items[item] && "weight" in Items[item]) total += Items[item].weight;
+  }
+  return total;
+}
+
+const NPCs = {};
+NPCs[key(10,1)] = {
+  name:"Riddler", type:"riddler",
+  description:"a mysterious figure in a green suit covered in question marks",
+  riddle:`
+    I am ever present; nothing escapes my my view. My nature
+    never changes, but by it, I change all. Even the strongest
+    warrior falls when I pass him by. What am I?`,
+  answer:"time", solved:false,
+  dialogue_before:"Answer my riddle and you may pass...",
+  dialogue_after:"Impressive! You may pass."
+};
+NPCs[key(14,1)] = {name:"Merchant", type:"shop", description:"a friendly merchant with a nice smile", solved:true};
+NPCs[key(17,14)] = {name:"Prisoner", type:"prisoner", description:"a old man covered in rags", free:false, solved:true};
+
+function getRoomDescription(r,c){
+  const pos = key(r,c);
+  if(pos in RoomDescriptions) return RoomDescriptions[pos];
+  return "A nondescript part of the maze.";
+}
+
+function getAdjacentNPCs(r,c){
+  const found = [];
+  if(key(r,c) in NPCs) found.push(["next", r, c]);
+  if(r > 0 && key(r-1,c) in NPCs) found.push(["north", r-1, c]);
+  if(r < Maze.length-1 && key(r+1,c) in NPCs) found.push(["south", r+1, c]);
+  if(c < Maze[0].length-1 && key(r,c+1) in NPCs) found.push(["east", r, c+1]);
+  if(c > 0 && key(r,c-1) in NPCs) found.push(["west", r, c-1]);
+  return found;
+}
+
+function getAdjacentEnemies(r,c){
+  const found = [];
+  if(key(r,c) in enemies) found.push(["next", r, c]);
+  if(r > 0 && key(r-1,c) in enemies) found.push(["north", r-1, c]);
+  if(r < Maze.length-1 && key(r+1,c) in enemies) found.push(["south", r+1, c]);
+  if(c < Maze[0].length-1 && key(r,c+1) in enemies) found.push(["east", r, c+1]);
+  if(c > 0 && key(r,c-1) in enemies) found.push(["west", r, c-1]);
+  return found;
+}
+
+function getAdjacentDoors(r,c){
+  const adj = [];
+  if(r > 0 && Maze[r-1][c] === 9) adj.push(["north", r-1, c]);
+  if(r < Maze.length-1 && Maze[r+1][c] === 9) adj.push(["south", r+1, c]);
+  if(c < Maze[0].length-1 && Maze[r][c+1] === 9) adj.push(["east", r, c+1]);
+  if(c > 0 && Maze[r][c-1] === 9) adj.push(["west", r, c-1]);
+  return adj;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Shop                                                                    */
+/* ---------------------------------------------------------------------- */
+
+async function handleBuying(s){
+  print("");
+  print("--- Items for Sale ---");
+  const itemsList = Object.entries(s.inventory);
+  itemsList.forEach(([item, price], i)=>{
+    const desc = Items[item].description.split("|")[0].trim();
+    print(`${i+1}. ${item} - ${price} coins - ${desc}`);
+  });
+  print(`${itemsList.length+1}. Cancel`);
+
+  const raw = await input("\nWhat would you like to buy? (number): ");
+  const choice = parseInt(raw, 10);
+  if(isNaN(choice)){ print("Please enter a number!"); return; }
+  if(choice >= 1 && choice <= itemsList.length){
+    const [item, price] = itemsList[choice-1];
+    const coinCount = PlayerInventory.filter(i=>i==="coin").length;
+    if(coinCount >= price){
+      for(let i=0;i<price;i++){
+        const idx = PlayerInventory.indexOf("coin");
+        PlayerInventory.splice(idx,1);
+      }
+      PlayerInventory.push(item);
+      print(`\nYou bought ${item} for ${price} coins!`);
+    } else {
+      print(`\nNot enough coins! You need ${price} coins, but you have ${coinCount}.`);
+    }
+  } else if(choice === itemsList.length+1){
+    print("Maybe next time!");
+  } else {
+    print("Invalid choice!");
+  }
+}
+
+async function handleSelling(s){
+  if(PlayerInventory.length === 0){
+    print("\nYou have nothing to sell!");
+    return;
+  }
+  const uniq = [...new Set(PlayerInventory)];
+  const sellable = [];
+  for(const item of uniq){
+    if(item in s.buy_prices){
+      const count = PlayerInventory.filter(i=>i===item).length;
+      sellable.push([item, count, s.buy_prices[item]]);
+    }
+  }
+  if(sellable.length === 0){
+    print("\nThe shopkeeper isn't interested in your items!");
+    return;
+  }
+  print("\n--- Items to Sell ---");
+  sellable.forEach(([item,count,price], i)=>{
+    print(`${i+1}. ${item} (x${count}) - ${price} coins each`);
+  });
+  print(`${sellable.length+1}. Cancel`);
+
+  const raw = await input("\nWhat would you like to sell? (number): ");
+  const choice = parseInt(raw, 10);
+  if(isNaN(choice)){ print("Please enter a number!"); return; }
+  if(choice >= 1 && choice <= sellable.length){
+    const [item, count, price] = sellable[choice-1];
+    let amount = 1;
+    if(count > 1){
+      const amtRaw = await input(`How many ${item}s? (1-${count}): `);
+      amount = parseInt(amtRaw, 10);
+      if(isNaN(amount) || amount < 1 || amount > count){
+        print("Invalid amount!");
+        return;
+      }
+    }
+    for(let i=0;i<amount;i++){
+      const idx = PlayerInventory.indexOf(item);
+      PlayerInventory.splice(idx,1);
+    }
+    for(let i=0;i<price*amount;i++){
+      PlayerInventory.push("coin");
+    }
+    print(`\nSold ${amount}x ${item} for ${price*amount} coins!`);
+  } else if(choice === sellable.length+1){
+    print("Maybe next time!");
+  } else {
+    print("Invalid choice!");
+  }
+}
+
+async function handleShopInteraction(s){
+  print(`\n${s.name}: "${s.greeting}"`);
+  while(true){
+    print(`\n${"=".repeat(50)}`);
+    print(`Your coins: ${PlayerInventory.filter(i=>i==="coin").length}`);
+    print(`Your health: ${PlayerHealth}`);
+    print(`\n1. Buy items`);
+    print(`2. Sell items`);
+    print(`3. Leave shop`);
+    const choice = (await input("\nWhat would you like to do? ")).toLowerCase().trim();
+    if(choice === "1" || choice === "buy"){
+      await handleBuying(s);
+    } else if(choice === "2" || choice === "sell"){
+      await handleSelling(s);
+    } else if(choice === "3" || choice === "leave" || choice === "exit"){
+      print(`\n${s.name}: "Safe travels!"`);
+      break;
+    } else {
+      print("Invalid choice!");
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Combat                                                                   */
+/* ---------------------------------------------------------------------- */
+
+function randint(min, max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
+  if(enemy.dead){
+    print(`There is a slayed ${enemy.name} on the ground`);
+    return;
+  }
+
+  print(`\n${"=".repeat(50)}`);
+  await typewriter(`\nYou engage the ${enemy.name} in combat!\n`);
+  print(`${"=".repeat(50)}`);
+  await sleep(500);
+
+  let playerDamage = 5;
+  let weaponUsed = "fists";
+
+  if(PlayerInventory.includes("mace")){ playerDamage = randint(20,30); weaponUsed = "mace"; }
+  else if(PlayerInventory.includes("sword")){ playerDamage = randint(15,25); weaponUsed = "sword"; }
+  else if(PlayerInventory.includes("spear")){ playerDamage = randint(12,20); weaponUsed = "spear"; }
+  else if(PlayerInventory.includes("rusty dagger")){ playerDamage = randint(8,15); weaponUsed = "rusty dagger"; }
+  else if(PlayerInventory.includes("rock")){ playerDamage = randint(5,10); weaponUsed = "rock"; }
+
+  const enemyStatsTable = {
+    "Minotaur":{health:80, damage:[20,35]},
+    "Troll":{health:60, damage:[12,25]},
+    "Brute":{health:50, damage:[10,20]},
+    "Goblin":{health:35, damage:[8,15]},
+    "Skeleton":{health:30, damage:[5,12]},
+    "Giant Rat":{health:20, damage:[3,8]}
+  };
+  const stats = enemyStatsTable[enemy.name] || {health:25, damage:[5,15]};
+  let enemyHealth = stats.health;
+  const [enemyMinDamage, enemyMaxDamage] = stats.damage;
+
+  let williamBonus = 0;
+  if(prisonerDialogueDone2){
+    williamBonus = randint(3,8);
+    williamBonus = Math.round(williamBonus * williamMulti);
+    print("William fights alongside you!");
+    await sleep(500);
+  }
+
+  print(`\n${enemy.name} Health: ${enemyHealth}`);
+  print(`Your Health: ${PlayerHealth}`);
+  print(`Your Weapon: ${weaponUsed} (Damage: ${playerDamage})`);
+  if(prisonerDialogueDone2) print(`William's Bonus: +${williamBonus} damage`);
+
+  let turn = 1;
+  while(enemyHealth > 0 && PlayerHealth > 0){
+    print(`\n--- Turn ${turn} ---`);
+    await sleep(500);
+
+    const totalDamage = playerDamage + williamBonus;
+    enemyHealth -= totalDamage;
+    print(`Your ${weaponUsed} deals ${totalDamage} damage!`);
+
+    if(enemyHealth <= 0){
+      enemyHealth = 0;
+      print(`\nThe ${enemy.name} has been defeated!`);
+      await sleep(2000);
+      break;
+    }
+
+    print(`${enemy.name} Health: ${enemyHealth}`);
+    await sleep(2000);
+
+    const enemyDamage = randint(enemyMinDamage, enemyMaxDamage);
+    print(`The ${enemy.name} attacks you for ${enemyDamage} damage!`);
+    PlayerHealth -= enemyDamage;
+    print(`Your Health: ${PlayerHealth}`);
+
+    if(PlayerHealth <= 20 && PlayerHealth > 0){
+      print("Your health is low!");
+    } else if(PlayerHealth <= 50 && PlayerHealth > 20){
+      print("You're taking heavy damage!");
+    }
+
+    if(PlayerHealth <= 0){
+      PlayerHealth = 0;
+      print(`\nThe ${enemy.name} has defeated you!`);
+      print("Your vision fades to black...");
+      await sleep(3000);
+      return;
+    }
+
+    await sleep(500);
+    turn += 1;
+
+    if(turn % 3 === 0 && enemyHealth > 0 && PlayerHealth > 0){
+      print(`\n${"=".repeat(50)}`);
+      print("\nWhat do you want to do?");
+      print("1. Continue fighting");
+      print("2. Use healing item");
+      print("3. Try to flee");
+      const choice = (await input("")).trim();
+
+      if(choice === "2"){
+        const healAmounts = {bread:30, bandage:50, cheese:20, gruel:10};
+        const healingItems = PlayerInventory.filter(i=>["bread","bandage","cheese","gruel"].includes(i));
+        if(healingItems.length){
+          print("\nHealing items:");
+          healingItems.forEach((item,i)=>{ print(`${i+1}. ${item}`); });
+          print(`${healingItems.length+1}. Cancel`);
+          const raw = await input("");
+          const pick = parseInt(raw, 10);
+          if(!isNaN(pick) && pick >= 1 && pick <= healingItems.length){
+            const item = healingItems[pick-1];
+            const heal = healAmounts[item];
+            PlayerHealth = Math.min(100, PlayerHealth + heal);
+            const idx = PlayerInventory.indexOf(item);
+            PlayerInventory.splice(idx,1);
+            print(`\nYou use ${item} and restore ${heal} health!`);
+            print(`Health: ${PlayerHealth}`);
+          } else if(pick === healingItems.length+1){
+            print("You decide to save your items.");
+          } else {
+            print("Invalid choice!");
+          }
+        } else {
+          print("You have no healing items!");
+        }
+      } else if(choice === "3"){
+        print(`\nYou successfully flee from the ${enemy.name}!`);
+        await sleep(2000);
+        return;
+      }
+    }
+  }
+
+  if(enemyHealth <= 0){
+    print(`\n${"=".repeat(50)}`);
+    await typewriter(`Victory! The ${enemy.name} has been slain!`);
+    print(`${"=".repeat(50)}`);
+
+    enemy.dead = true;
+    enemy.name = `Dead ${enemy.name}`;
+    Maze[enemyRow][enemyCol] = 0;
+
+    if(enemy.loot && enemy.loot.length){
+      const pos = key(enemyRow, enemyCol);
+      if(!(pos in RoomItems)) RoomItems[pos] = [];
+      RoomItems[pos].push(...enemy.loot);
+      print(`The ${enemy.name} dropped: ${enemy.loot.join(", ")}`);
+    }
+
+    row = enemyRow;
+    col = enemyCol;
+    PlayerPos = [row, col];
+
+    await sleep(3000);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* NPC / Riddler                                                            */
+/* ---------------------------------------------------------------------- */
+
+async function handleNpcInteraction(npc, npcRow, npcCol){
+  if(npc.type === "riddler"){
+    if(!npc.solved){
+      print(`\n${npc.name} asks: "${npc.riddle}"`);
+      const answer = (await input("\nYour answer: ")).toLowerCase().trim();
+      if(answer === npc.answer){
+        npc.solved = true;
+        print(`\n${npc.name}: "${npc.dialogue_after}"`);
+        Maze[npcRow][npcCol] = 0;
+      } else {
+        print(`\n${npc.name}: Wrong! Try again when youre wiser.`);
+      }
+    } else {
+      print("Riddler: Hello there");
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Prisoner dialogue                                                       */
+/* ---------------------------------------------------------------------- */
+
+async function askNumber(validSet){
+  while(true){
+    const raw = await input("");
+    const n = parseInt(raw, 10);
+    if(!isNaN(n) && validSet.includes(n)) return n;
+    print("Choose a number");
+  }
+}
+
+let playerName = "traveller";
+
+async function prisonerDialogue(){
+  await typewriter("\nPrisoner: help me...");
+  print("\n1 - What happened to you?");
+  print("2 - Who are you?");
+  let choice = await askNumber([1,2]);
+
+  if(choice === 1){
+    print("");
+    await dotCycle("Prisoner");
+    await typewriter("Prisoner: I dont know");
+    await typewriter("Prisoner: I was doing something until i think i was knocked out and trapped here");
+    print("\n1 - Who are you?");
+    await askNumber([1]);
+    print("");
+    await dotCycle("Prisoner");
+    print("Prisoner: My name is William, whats yours?");
+    playerName = await input("");
+    print("");
+    await dotCycle("Prisoner");
+    print("Prisoner: Right, nice to meet you", playerName, ",will you help me get out of here?");
+    print("\n1 - Yes");
+    print("2 - No i have to go, im sorry");
+    choice = await askNumber([1,2]);
+    await prisonerAfterIntro(choice);
+  } else if(choice === 2){
+    print("");
+    await dotCycle("Prisoner");
+    print("Prisoner: My name is William, whats yours?");
+    playerName = await input("");
+    print("");
+    await dotCycle("Prisoner");
+    print("Prisoner: Right, nice to meet you", playerName, ",will you help me get out of here?");
+    print("\n1 - Yes");
+    print("2 - No i have to go, im sorry");
+    choice = await askNumber([1,2]);
+    await prisonerAfterIntro(choice);
+  }
+}
+
+async function prisonerAfterIntro(choice){
+  if(choice === 1){
+    print("\nPrisoner: God bless you", playerName);
+    await sleep(1000);
+    print("\nPrison: I belive that the time i was captured, the poeple who put me here went west from here");
+    await sleep(1000);
+    print("\nPrisoner: Im sure the key is in that direction");
+    print("\n1 - What type of key?");
+    await askNumber([1]);
+    await sleep(2000);
+    print("\nWilliam: I believe it was an iron key, i remember the shine it gave");
+    await sleep(2000);
+    print("\n1 - Ill be back soon ,sit tight");
+    await askNumber([1]);
+    await sleep(2000);
+    print("\nWilliam: Thank you and stay safe", playerName);
+  } else if(choice === 2){
+    print("I understand, i hope you find your way out", playerName);
+  }
+}
+
+async function prisonerDialogue2(){
+  print("");
+  await dotCycle("Prisoner");
+  await typewriter("Prisoner: Well, ill be damned!");
+  await typewriter("\nWilliam: You found it!");
+  await typewriter("\nWilliam: I will be forever grateful friend!");
+  await typewriter("\nWilliam: I will join you on this journey");
+  print("");
+  await dotCycle("Prisoner");
+  await typewriter("William: Till death do us part...");
+  print("\nWilliam will now aid you in battle as a gratitude of your kindness!");
+  print("You can give him weapons using the 'give' command to make him stronger in battle");
+  print("You can take the weapon back by using the 'take' command");
+}
+
+/* ---------------------------------------------------------------------- */
+/* Movement helper                                                         */
+/* ---------------------------------------------------------------------- */
+
+async function afterMoveReport(r,c){
+  checkForTrap(r,c);
+  print(getRoomDescription(r,c));
+  const pos = key(r,c);
+  if(pos in RoomItems && RoomItems[pos].length){
+    print("You see:", RoomItems[pos].join(", "));
+  }
+}
+
+async function tryMove(dr, dc){
+  const targetRow = row + dr;
+  const targetCol = col + dc;
+  const targetVal = Maze[targetRow][targetCol];
+
+  if(targetVal === 8){
+    const npcPos = key(targetRow, targetCol);
+    if(npcPos in NPCs && !NPCs[npcPos].solved){
+      print(`${NPCs[npcPos].name} blocks your path!`);
+      print(`"${NPCs[npcPos].dialogue_before}"`);
+      return;
+    } else {
+      row = targetRow; col = targetCol;
+      PlayerPos = [row,col];
+      VisitedRooms.add(key(row,col));
+      await afterMoveReport(row,col);
+      return;
+    }
+  }
+
+  if(targetVal === 5){
+    const enemyPos = key(targetRow, targetCol);
+    if(enemyPos in enemies && !enemies[enemyPos].dead){
+      print(`${enemies[enemyPos].name} blocks your path!`);
+      print(`${enemies[enemyPos].requirement}`);
+      return;
+    } else {
+      row = targetRow; col = targetCol;
+      PlayerPos = [row,col];
+      VisitedRooms.add(key(row,col));
+      await afterMoveReport(row,col);
+      return;
+    }
+  }
+
+  if(targetVal !== 1){
+    if(targetVal === 9){
+      const doorPos = key(targetRow, targetCol);
+      if(doorPos in Doors && Doors[doorPos].locked){
+        print(`The door is locked! ${Doors[doorPos].description}`);
+        return;
+      } else {
+        row = targetRow; col = targetCol;
+        PlayerPos = [row,col];
+        await afterMoveReport(row,col);
+        return;
+      }
+    } else {
+      row = targetRow; col = targetCol;
+      PlayerPos = [row,col];
+      await afterMoveReport(row,col);
+      return;
+    }
+  } else {
+    print("Theres a wall in the way!");
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Main game loop                                                          */
+/* ---------------------------------------------------------------------- */
+
+async function mainGame(){
+  print("\nWest side of the maze");
+  print("There is a lonely letter left on the ground");
+
+  while(true){
+    stepCount += 1;
+
+    if(PlayerHealth === 0){
+      print("You have lost all of your health and died! Game Over!");
+      lost += 1;
+      break;
+    }
+
+    if(PlayerPos[0] === 10 && PlayerPos[1] === 9){
+      print("Would you like to climb out of the maze or explore some more?");
+      const ans = (await input("")).toLowerCase().trim();
+      if(ans === "climb"){
+        break;
+      } else {
+        print("Have fun and make sure to not die!");
+      }
+    }
+
+    const command = (await input("")).toLowerCase().trim();
+
+    if(command === "side"){
+      const atEntrance = (PlayerPos[0]===0&&PlayerPos[1]===10) || (PlayerPos[0]===19&&PlayerPos[1]===4) ||
+                          (PlayerPos[0]===9&&PlayerPos[1]===19) || (PlayerPos[0]===5&&PlayerPos[1]===0);
+      if(atEntrance){
+        print("Which side?");
+        const dir = (await input("")).toLowerCase().trim();
+        if(dir === "north" || dir === "n"){
+          row=0; col=10; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
+          print("North Side of the maze\n");
+          print("You are at the north entrance of the maze, there is a wall to the west and east of you with a path going south");
+        } else if(dir === "south" || dir === "s"){
+          row=19; col=4; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
+          print("South Side of the maze\n");
+          print("You are at the south entrance of the maze, there is a wall to the west and east of you with a path going north");
+        } else if(dir === "east" || dir === "e"){
+          row=9; col=19; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
+          print("East Side of the maze\n");
+          print("You are at the east entrance of the maze, there is a wall to the north and south of you with a path going west");
+        } else if(dir === "west" || dir === "w"){
+          row=5; col=0; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
+          print("West Side of the maze\n");
+          print("You are at the west entrance of the maze, there is a wall to the north and south of you with a path going west");
+        } else {
+          print("What does", dir, "even mean?");
+        }
+      } else {
+        print("You cant go to the side as you are inside the maze!");
+      }
+    }
+
+    else if(command === "go"){
+      print("Youll have to say which compass direction to go in");
+      const dir = (await input("")).toLowerCase().trim();
+      if(dir === "n" || dir === "north") await tryMove(-1,0);
+      else if(dir === "s" || dir === "south") await tryMove(1,0);
+      else if(dir === "e" || dir === "east") await tryMove(0,1);
+      else if(dir === "w" || dir === "west") await tryMove(0,-1);
+      else print("Not a valid direction, choose either north, east, south or west");
+    }
+
+    else if(command === "look"){
+      print("Look at what?");
+      const target = (await input("")).toLowerCase().trim();
+      if(target === "health" || target === "h"){
+        print("You have", PlayerHealth, "health");
+      } else if(target === "inventory" || target === "i"){
+        if(PlayerInventory.length){
+          const w = getInventoryWeight();
+          print(`You are carrying (${w}/${MAX_WEIGHT} weight):`);
+          print(PlayerInventory.join(", "));
+        } else {
+          print("You are not carrying anything");
+        }
+      } else if(target === "room"){
+        const pos = key(row,col);
+        const adjDoors = getAdjacentDoors(row,col);
+        for(const [direction, dr, dc] of adjDoors){
+          const doorPos = key(dr,dc);
+          if(doorPos in Doors){
+            print(Doors[doorPos].locked ? `There is a locked door ${direction} to you` : `There is an unlocked door ${direction} to you`);
+          } else {
+            print(`There is a door ${direction} to you`);
+          }
+        }
+        const adjNpcs = getAdjacentNPCs(row,col);
+        for(const [direction, nr, nc] of adjNpcs){
+          const npc = NPCs[key(nr,nc)];
+          print(`There is a ${npc.description} ${direction} to you`);
+        }
+        const adjEnemies = getAdjacentEnemies(row,col);
+        for(const [direction, er, ec] of adjEnemies){
+          const enemy = enemies[key(er,ec)];
+          print(`There is a ${enemy.name} ${direction} to you`);
+        }
+        if(pos in RoomItems && RoomItems[pos].length){
+          print("You see:", RoomItems[pos].join(", "));
+        } else {
+          print("There are no useful items here");
+        }
+      } else {
+        print("Thats not something that you can see");
+      }
+    }
+
+    else if(command === "pick up"){
+      print("What do you want to pick up?");
+      const target = (await input("")).toLowerCase().trim();
+      const pos = key(row,col);
+      if(pos in RoomItems && RoomItems[pos].includes(target)){
+        const item = target;
+        const itemWeight = (Items[item] && "weight" in Items[item]) ? Items[item].weight : 1;
+        const currentWeight = getInventoryWeight();
+        if(currentWeight + itemWeight > MAX_WEIGHT){
+          print(`That ${item} weighs ${itemWeight}. You're carrying ${currentWeight}/${MAX_WEIGHT} weight.`);
+          print("You can't carry any more!");
+        } else if(Items[item].grabbable){
+          RoomItems[pos].splice(RoomItems[pos].indexOf(item),1);
+          PlayerInventory.push(item);
+          print(`You picked up the ${item} (weight: ${itemWeight})`);
+          print(`Total weight: ${getInventoryWeight()}/${MAX_WEIGHT}`);
+          if(RoomItems[pos].length === 0) delete RoomItems[pos];
+        } else {
+          print(`You can't pick up the ${item}!`);
+        }
+      } else {
+        print(`There is no ${target} here!`);
+      }
+    }
+
+    else if(command === "pick up all"){
+      const pos = key(row,col);
+      if(!(pos in RoomItems) || RoomItems[pos].length === 0){
+        print("There's nothing here to pick up!");
+      } else {
+        const picked = [];
+        const left = [];
+        let currentWeight = getInventoryWeight();
+        for(const item of RoomItems[pos].slice()){
+          if(!Items[item].grabbable){
+            left.push(item);
+            print(`You can't pick up the ${item}!`);
+            continue;
+          }
+          const w = (Items[item] && "weight" in Items[item]) ? Items[item].weight : 1;
+          if(currentWeight + w <= MAX_WEIGHT){
+            PlayerInventory.push(item);
+            picked.push(item);
+            RoomItems[pos].splice(RoomItems[pos].indexOf(item),1);
+            currentWeight += w;
+          } else {
+            left.push(item);
+          }
+        }
+        if(picked.length){
+          print(`You picked up: ${picked.join(", ")}`);
+          print(`Current weight: ${currentWeight}/${MAX_WEIGHT}`);
+        }
+        if(left.length){
+          print(`Couldn't carry: ${left.join(", ")}`);
+        }
+        if(RoomItems[pos].length === 0) delete RoomItems[pos];
+      }
+    }
+
+    else if(command === "drop all"){
+      if(PlayerInventory.length){
+        const dropped = PlayerInventory.slice();
+        PlayerInventory.length = 0;
+        const pos = key(row,col);
+        if(!(pos in RoomItems)) RoomItems[pos] = [];
+        RoomItems[pos].push(...dropped);
+        print(`You dropped: ${dropped.join(", ")}`);
+        print("Your inventory is now empty.");
+      } else {
+        print("You have nothing to drop!");
+      }
+    }
+
+    else if(command === "drop"){
+      if(PlayerInventory.length){
+        print("What do you want to drop? ");
+        const target = (await input("")).toLowerCase().trim();
+        if(PlayerInventory.includes(target)){
+          PlayerInventory.splice(PlayerInventory.indexOf(target),1);
+          const pos = key(row,col);
+          if(!(pos in RoomItems)) RoomItems[pos] = [];
+          RoomItems[pos].push(target);
+          print(`You dropped the ${target}`);
+        } else {
+          print(`You don't have a ${target}!`);
+        }
+      } else {
+        print("You have nothing to drop!");
+      }
+    }
+
+    else if(command === "read"){
+      print("What do you want to read? ");
+      const target = (await input("")).toLowerCase().trim();
+      if(PlayerInventory.includes(target)){
+        if(Items[target] && Items[target].readable){
+          print(`"${Items[target].text}"`);
+        } else {
+          print(`You can't read the ${target}!`);
+        }
+      } else {
+        const pos = key(row,col);
+        if(pos in RoomItems && RoomItems[pos].includes(target)){
+          if(Items[target].readable){
+            print(`You read the ${target}:`);
+            print(`"${Items[target].text}"`);
+          } else {
+            print(`You can't read the ${target}!`);
+          }
+        } else {
+          print(`There is no ${target} to read!`);
+        }
+      }
+    }
+
+    else if(command === "inspect"){
+      print("What do you want to inspect? ");
+      const target = (await input("")).toLowerCase().trim();
+      if(PlayerInventory.includes(target)){
+        print(Items[target].description);
+      } else {
+        const pos = key(row,col);
+        if(pos in RoomItems && RoomItems[pos].includes(target)){
+          print(Items[target].description);
+        } else {
+          print(`There is no ${target} to inspect!`);
+        }
+      }
+    }
+
+    else if(command === "fight"){
+      print("Are you sure you want to fight?");
+      const ans = (await input("")).toLowerCase().trim();
+      if(ans === "yes"){
+        const nearby = getAdjacentEnemies(row,col);
+        if(nearby.length){
+          const [,er,ec] = nearby[0];
+          const enemy = enemies[key(er,ec)];
+          await handleEnemyInteraction(enemy, er, ec);
+        } else {
+          print("There's no one here to fight.");
+        }
+      } else if(ans === "no"){
+        print("Wasting my time honestly");
+      } else {
+        print("Please answer with a yes or no");
+      }
+    }
+
+    else if(command === "use"){
+      print("What do you want to use? ");
+      const target = (await input("")).toLowerCase().trim();
+      if(PlayerInventory.includes(target)){
+        if(target === "bread"){
+          PlayerHealth = Math.min(100, PlayerHealth+30);
+          PlayerInventory.splice(PlayerInventory.indexOf("bread"),1);
+          print("You just gained 30 health, you now have", PlayerHealth, "health");
+        } else if(target === "bandage"){
+          PlayerHealth = Math.min(100, PlayerHealth+50);
+          PlayerInventory.splice(PlayerInventory.indexOf("bandage"),1);
+          print("You just gained 50 health, you now have", PlayerHealth, "health");
+        } else if(target === "cheese"){
+          PlayerHealth = Math.min(100, PlayerHealth+20);
+          PlayerInventory.splice(PlayerInventory.indexOf("cheese"),1);
+          print("You just gained 20 health, you now have", PlayerHealth, "health");
+        } else if(target === "gruel"){
+          PlayerHealth = Math.min(100, PlayerHealth+10);
+          PlayerInventory.splice(PlayerInventory.indexOf("gruel"),1);
+          print("You just gained 10 health, you now have", PlayerHealth, "health");
+        } else if(["brass key","copper key","iron key","gold key"].includes(target)){
+          const adjDoors = getAdjacentDoors(row,col);
+          if(adjDoors.length){
+            let unlockedAny = false;
+            for(const [direction, dr, dc] of adjDoors){
+              const doorPos = key(dr,dc);
+              if(doorPos in Doors && Doors[doorPos].locked){
+                if(Items[target].opens === Doors[doorPos].key_needed){
+                  Doors[doorPos].locked = false;
+                  unlockedAny = true;
+                  if(target === "iron key" && dr===17 && dc===14){
+                    NPCs[key(17,14)].free = true;
+                    print("You unlocked the prison door");
+                  } else {
+                    print(`You unlock the door to the ${direction} with your key!`);
+                  }
+                }
+              }
+            }
+            if(!unlockedAny) print("None of the adjacent doors can be unlocked with this key.");
+          } else {
+            print("There are no doors nearby to use the key on.");
+          }
+        } else {
+          print(`You can't use the ${target} right now`);
+        }
+      } else {
+        print(`You don't have a ${target}!`);
+      }
+    }
+
+    else if(command === "talk"){
+      const nearby = getAdjacentNPCs(row,col);
+      if(nearby.length){
+        const [,nr,nc] = nearby[0];
+        const npc = NPCs[key(nr,nc)];
+        if(npc.type === "riddler"){
+          await handleNpcInteraction(npc, nr, nc);
+        } else if(npc.type === "prisoner"){
+          if(!npc.free){
+            if(!prisonerDialogueDone){
+              prisonerDialogueDone = true;
+              await prisonerDialogue();
+            } else {
+              await typewriter("\nWilliam: Have you found the key?");
+              print("\n1 - Yes");
+              print("2 - No");
+              const choice = await askNumber([1,2]);
+              if(choice === 2){
+                await typewriter("\nWilliam: Well take your time, im not going anywhere");
+              } else {
+                await typewriter("\nWilliam: Well then get me out here!");
+              }
+            }
+          } else {
+            if(!prisonerDialogueDone2){
+              prisonerDialogueDone2 = true;
+              await prisonerDialogue2();
+            } else {
+              await typewriter("\nWilliam: Less talking, more escaping please");
+            }
+          }
+        } else if(npc.type === "shop"){
+          const currentShop = shop[key(nr,nc)];
+          if(currentShop){
+            await handleShopInteraction(currentShop);
+          } else {
+            print(`${npc.name}: "..."`);
+          }
+        } else {
+          print(`${npc.name}: "..."`);
+        }
+      } else {
+        print("There's no one here to talk to.");
+      }
+    }
+
+    else if(command === "give"){
+      if(prisonerDialogueDone2){
+        print("What would you like to give William?");
+        const target = (await input("")).toLowerCase().trim();
+        if(PlayerInventory.includes(target)){
+          const validWeapons = ["mace","sword","spear","rusty dagger","rock"];
+          if(validWeapons.includes(target)){
+            if(williamWeapon !== null){
+              PlayerInventory.push(williamWeapon);
+              print(`William gives you back the ${williamWeapon}`);
+              williamMulti = 1.0;
+            }
+            PlayerInventory.splice(PlayerInventory.indexOf(target),1);
+            williamWeapon = target;
+            if(target === "mace"){ williamMulti = 2.0; print("You gave William your mace! He will now do 2.0x damage!"); }
+            else if(target === "sword"){ williamMulti = 1.8; print("You gave William your sword! He will now do 1.8x damage!"); }
+            else if(target === "spear"){ williamMulti = 1.6; print("You gave William your spear! He will now do 1.6x damage!"); }
+            else if(target === "rusty dagger"){ williamMulti = 1.4; print("You gave William your rusty dagger! He will now do 1.4x damage!"); }
+            else if(target === "rock"){ williamMulti = 1.2; print("You gave William your rock! He will now do 1.2x damage!"); }
+          } else {
+            print(`You can't give the ${target} to William`);
+          }
+        } else {
+          print(`You don't have a ${target}`);
+        }
+      } else {
+        print("There's no one here to give anything to");
+      }
+    }
+
+    else if(command === "take"){
+      if(prisonerDialogueDone2){
+        if(williamWeapon !== null){
+          PlayerInventory.push(williamWeapon);
+          print(`William gives you back the ${williamWeapon}.`);
+          williamWeapon = null;
+          williamMulti = 1.0;
+        } else {
+          print("William doesn't have any weapon to give back.");
+        }
+      } else {
+        print("There's no one here to take from.");
+      }
+    }
+
+    else if(command === "info"){
+      print(`
+These are the commands that exist in the game, USE THEM and please make sure to check your spelling
+    side - This will let you switch to a different side of the maze (only works at the entrances)
+    go - This will allow you to move around the maze in 4 directions (north,east,south,west)
+    look - This will allow you to look at either your health, inventory or the room you are in
+    pick up - self explanatory, it lets you pick stuff up and hold it in your inventory
+    pick up all - Works after the 'pick up' command and allows you to pick up all items avaliable to you
+    drop - Literally the opposite of pick up
+    drop all - Allows you to drop everything in your inventory
+    read - lets you read whatver you have in your inventory
+    inspect - This will describe an item in your inventory of choosing (this is not the same as read)
+    use - This will allow you to use the item of choosing from your inventory
+    talk - Allows you to talk to NPCs near you
+    fight - Allows you to fight enemies near you
+    template - Gives you a template of the map of the maze
+    map - Shows your current position in the maze
+    cheats - This will give you invincibility, all of the items to beat the game and prints you a map of the whole maze
+Top tips:
+    Whenever you use an item, make sure you spell it EXACTLY the same as when you see it
+
+    The direction commands are shortened to the first letter, so;
+        n - north
+        s - south
+        e - east
+        w - west
+    This also applies to;
+        i - inventory
+        t - template
+        h - health
+        `);
+    }
+
+    else if(command === "help"){
+      print(`
+To win, you have to enter the maze and find the centre to escape through the ladder to the surface of the earth
+You have to make sure you are healthy, have good weapons and items that help you to kill the final boss in the centre
+It is highly recommended to keep track of what the maze looks like so you can backtrack and go into different areas
+(type "template" for the template of what the maze looks lke or "cheats" for invincibility, all of the items to beat the game and a map of the whole maze)`);
+    }
+
+    else if(command === "template" || command === "t"){
+      print(`
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 9, 9, 0, 0, 0, 0, 0, 0, 0, 0, 2
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 9, 9, 0, 0, 0, 0, 0, 0, 0, 1, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+
+The 1's represent walls
+The 9's represent the final exit
+the 2's represent the 4 entrances
+Thats all of the info that im giving you
+Good luck traveller
+`);
+    }
+
+    else if(command === "cheats"){
+      print("You really thought i was going to give you all that? LOOOOOL Nice try");
+    }
+
+    else if(command === "quit"){
+      print("Are you sure you want to quit?");
+      const ans = (await input("")).toLowerCase().trim();
+      if(ans === "yes"){
+        print("GoodBye! Hope you had fun!");
+        return;
+      } else if(ans === "no"){
+        print("Then why ask? Wasting my damn time");
+      } else {
+        print("Please answer with a yes or no");
+      }
+    }
+
+    else if(command === "swear"){
+      print(randint(1,2) === 1 ? "F*ck" : "Sh*t");
+    }
+
+    else if(command === "map"){
+      print("Your map:");
+      let mapText = "";
+      for(let r=0;r<20;r++){
+        let line = "";
+        for(let c=0;c<20;c++){
+          line += (r===row && c===col) ? "@ " : "? ";
+        }
+        mapText += line + "\n";
+      }
+      print(mapText);
+    }
+
+    else if(command === "hello"){ print("Good day."); }
+    else if(command === "what"){ print("What do you want to what is?"); }
+    else if(command === "where"){ print("Where do you want to where is?"); }
+    else if(command === "time"){
+      const elapsed = (Date.now() - startTime)/1000;
+      const minutes = Math.floor(elapsed/60);
+      const seconds = Math.floor(elapsed%60);
+      if(minutes === 0) print(`You have been playing for ${seconds} seconds too long`);
+      else print(`You have been playing for ${minutes} minutes and ${seconds} seconds too long`);
+    }
+    else if(command === "shout" || command === "scream" || command === "yell"){
+      print("AAAARRRRRRRGGGGGHHHHhhhhh");
+    }
+    else if(command === ""){
+      print("I beg your pardon?");
+    }
+    else {
+      print("Thats not a verb i recognise");
+    }
+  }
+
+  if(lost === 1){
+    await sleep(1500);
+    await typewriter("\nOh dear, you died ");
+    await sleep(500);
+    await typewriter("\nIt happens to the best of us! ");
+    await typewriter("\nAll it takes is a retry and eventually youll make it");
+    await typewriter("\nHere are some stats of your journey");
+    print("\n" + "=".repeat(64));
+    print("\nYou took", stepCount, "steps");
+    const elapsed = (Date.now() - startTime)/1000;
+    const minutes = Math.floor(elapsed/60);
+    const seconds = Math.floor(elapsed%60);
+    await sleep(500);
+    print(`You wasted ${minutes} minutes and ${seconds} seconds`);
+    print("Would you like to play again?");
+    const again = await input("");
+    if(again.toLowerCase().trim() === "yes"){
+      resetAndRestart();
+    } else {
+      print("Hope you had fun!");
+    }
+  } else {
+    await typewriter("\nWow you made it! Well done traveller");
+    await sleep(1500);
+    await typewriter("\nHere are some stats of your journey");
+    print("\n" + "=".repeat(64));
+    print("\nIt took you", stepCount, "steps to complete your journey");
+    const elapsed = (Date.now() - startTime)/1000;
+    const minutes = Math.floor(elapsed/60);
+    const seconds = Math.floor(elapsed%60);
+    print(`and ${minutes} minutes and ${seconds} seconds to complete the game!`);
+    await sleep(1500);
+    await typewriter("\nYou now step and see the world for the first time in 7 years..");
+  }
+}
+
+function resetAndRestart(){
+  location.reload();
+}
+
+mainGame().catch(err=>{
+  sys("An error occurred: " + err.message);
+  console.error(err);
+});
+
+})();
+</script>
+</body>
+</html>
