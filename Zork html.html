@@ -11,7 +11,7 @@
     --ink:#ffffff;
     --ink-soft:#ffffff;
     --rule:#ffffff;
-    --accent:#ffffff;
+    --accent:#0ccad8c9;
   }
   html,body{
     height:100%;
@@ -23,7 +23,7 @@
     color:var(--ink);
   }
   #page{
-    max-width:760px;
+    max-width:900px;
     margin:0 auto;
     min-height:100vh;
     background:var(--paper);
@@ -118,10 +118,6 @@
 (function(){
 "use strict";
 
-/* ---------------------------------------------------------------------- */
-/* Low level output / input plumbing                                      */
-/* ---------------------------------------------------------------------- */
-
 const outputEl = document.getElementById('output');
 
 function scrollDown(){
@@ -151,7 +147,7 @@ async function sleep(ms){
   return new Promise(r=>setTimeout(r, ms));
 }
 
-async function typewriter(text, delay=18){
+async function typewriter(text, delay=60){
   const p = document.createElement('p');
   outputEl.appendChild(p);
   let buffer = "";
@@ -159,7 +155,7 @@ async function typewriter(text, delay=18){
     buffer += ch;
     p.textContent = buffer;
     scrollDown();
-    if(ch === ":" || ch === "!"){
+    if(ch === ":"){
       await sleep(260);
     } else {
       await sleep(delay);
@@ -167,11 +163,7 @@ async function typewriter(text, delay=18){
   }
 }
 
-// Creates a live input line INLINE in the transcript, right after whatever
-// was just printed - not pinned to the bottom of the page. Once the user
-// hits Enter, the live input is replaced with a plain echoed line and the
-// promise resolves with the typed value.
-function waitForInput(){ //-------------------------------------------------------------------------------------------------
+function waitForInput(){
   return new Promise(resolve=>{
     const row = document.createElement('div');
     row.className = 'input-row';
@@ -219,14 +211,12 @@ function waitForInput(){ //-----------------------------------------------------
   });
 }
 
-// shorthand replicating python's input(promptText)
 async function input(promptText){
   if(promptText) printRaw(promptText);
   const v = await waitForInput();
   return v;
 }
 
-/* small "thinking dots" animation, used for prisoner dialogue beats */
 async function dotCycle(label){
   const p = document.createElement('p');
   outputEl.appendChild(p);
@@ -238,10 +228,6 @@ async function dotCycle(label){
   }
   outputEl.removeChild(p);
 }
-
-/* ---------------------------------------------------------------------- */
-/* Game data                                                               */
-/* ---------------------------------------------------------------------- */
 
 const MAX_WEIGHT = 20;
 let row = 5, col = 0;
@@ -260,26 +246,27 @@ const startTime = Date.now();
 function key(r,c){ return r + "," + c; }
 
 const Maze = [
-  [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,1,1,3,3,1,0,0,0,0,0,0,0,1,0,1],
-  [1,9,1,0,0,0,1,3,3,1,0,1,1,0,1,1,0,1,5,1],
-  [1,0,1,1,1,0,1,1,0,1,3,1,3,3,1,1,0,0,0,1],
-  [1,0,0,3,1,0,1,0,0,1,1,1,3,3,1,1,0,1,1,1],
-  [0,0,1,1,1,0,1,5,1,1,1,1,0,1,1,1,0,0,0,1],
-  [1,1,1,0,1,0,1,0,1,1,0,0,0,0,0,1,9,1,0,1],
-  [1,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,1,0,1],
-  [1,5,1,1,1,0,1,0,1,1,1,1,0,1,1,1,1,1,1,1],
-  [1,0,1,0,0,0,1,0,1,3,5,9,0,1,3,3,1,0,0,0],
-  [1,8,1,1,0,1,1,0,1,6,3,1,1,1,3,3,1,0,1,1],
-  [1,0,1,1,0,1,3,0,1,1,1,1,1,1,0,1,1,0,1,1],
-  [1,0,0,1,0,1,1,0,0,1,1,1,0,0,0,1,0,0,0,1],
-  [1,1,0,1,5,1,1,1,0,0,5,0,0,1,1,1,0,1,0,1],
-  [1,7,0,1,0,1,1,1,1,1,1,1,1,1,0,0,0,1,0,1],
-  [1,1,0,1,0,1,0,1,3,1,0,0,0,1,1,1,1,1,0,1],
-  [1,0,0,1,0,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,0,1,0,1,1,0,0,1,9,1,3,1,3,1],
-  [1,0,0,0,0,1,0,1,0,0,0,0,1,1,3,1,1,1,1,1],
-  [1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],//0
+  [1,0,0,0,1,1,1,3,3,1,0,0,0,0,0,0,0,1,0,1],//1
+  [1,9,1,0,0,0,1,3,3,1,0,1,1,0,1,1,0,1,5,1],//2
+  [1,0,1,1,1,0,1,1,0,1,3,1,3,3,1,1,0,0,0,1],//3
+  [1,0,0,3,1,0,1,0,0,1,1,1,3,3,1,1,0,1,1,1],//4
+  [0,0,1,1,1,0,1,5,1,1,1,1,0,1,1,1,0,0,0,1],//5
+  [1,1,1,0,1,0,1,0,1,1,0,0,0,0,0,1,9,1,0,1],//6
+  [1,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,1,0,1],//7
+  [1,5,1,1,1,0,1,0,1,1,1,1,0,1,1,1,1,1,1,1],//8
+  [1,0,1,0,0,0,1,0,1,3,5,9,0,1,3,3,1,0,0,0],//9
+  [1,8,1,1,0,1,1,0,1,6,3,1,1,1,3,3,1,0,1,1],//10
+  [1,0,1,1,0,1,3,0,1,1,1,1,1,1,0,1,1,0,1,1],//11
+  [1,0,0,1,0,1,1,0,0,1,1,1,0,0,0,1,0,0,0,1],//12
+  [1,1,0,1,5,1,1,1,0,0,5,0,0,1,1,1,0,1,0,1],//13
+  [1,7,0,1,0,1,1,1,1,1,1,1,1,1,0,0,0,1,0,1],//14
+  [1,1,0,1,0,1,0,1,3,1,0,0,0,1,1,1,1,1,0,1],//15
+  [1,0,0,1,0,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1],//16
+  [1,0,1,1,0,1,0,1,0,1,1,0,0,1,9,1,3,1,3,1],//17
+  [1,0,0,0,0,1,0,1,0,0,0,0,1,1,3,1,1,1,1,1],//18
+  [1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] //19
+// 1 2 3 4 5 6 7 8 9 
 ];
 
 const RoomDescriptions = {};
@@ -507,12 +494,10 @@ function checkForTrap(r,c){
   if(trap.one_time && trap.triggered) return false;
   trap.triggered = true;
   PlayerHealth -= trap.damage;
-  print("");
   print(trap.description);
   print(`You took ${trap.damage} damage`);
   print(`Health remaining: ${PlayerHealth} health`);
   if(PlayerHealth <= 0){
-    print("");
     print("The trap was fatal...");
     PlayerHealth = 0;
   }
@@ -666,12 +651,7 @@ function getAdjacentDoors(r,c){
   return adj;
 }
 
-/* ---------------------------------------------------------------------- */
-/* Shop                                                                    */
-/* ---------------------------------------------------------------------- */
-
 async function handleBuying(s){
-  print("");
   print("--- Items for Sale ---");
   const itemsList = Object.entries(s.inventory);
   itemsList.forEach(([item, price], i)=>{
@@ -680,7 +660,7 @@ async function handleBuying(s){
   });
   print(`${itemsList.length+1}. Cancel`);
 
-  const raw = await input("\nWhat would you like to buy? (number): ");
+  const raw = await input("What would you like to buy? (number): ");
   const choice = parseInt(raw, 10);
   if(isNaN(choice)){ print("Please enter a number!"); return; }
   if(choice >= 1 && choice <= itemsList.length){
@@ -692,9 +672,9 @@ async function handleBuying(s){
         PlayerInventory.splice(idx,1);
       }
       PlayerInventory.push(item);
-      print(`\nYou bought ${item} for ${price} coins!`);
+      print(`You bought ${item} for ${price} coins!`);
     } else {
-      print(`\nNot enough coins! You need ${price} coins, but you have ${coinCount}.`);
+      print(`Not enough coins! You need ${price} coins, but you have ${coinCount}.`);
     }
   } else if(choice === itemsList.length+1){
     print("Maybe next time!");
@@ -705,7 +685,7 @@ async function handleBuying(s){
 
 async function handleSelling(s){
   if(PlayerInventory.length === 0){
-    print("\nYou have nothing to sell!");
+    print("You have nothing to sell!");
     return;
   }
   const uniq = [...new Set(PlayerInventory)];
@@ -717,16 +697,16 @@ async function handleSelling(s){
     }
   }
   if(sellable.length === 0){
-    print("\nThe shopkeeper isn't interested in your items!");
+    print("The shopkeeper isn't interested in your items!");
     return;
   }
-  print("\n--- Items to Sell ---");
+  print("--- Items to Sell ---");
   sellable.forEach(([item,count,price], i)=>{
     print(`${i+1}. ${item} (x${count}) - ${price} coins each`);
   });
   print(`${sellable.length+1}. Cancel`);
 
-  const raw = await input("\nWhat would you like to sell? (number): ");
+  const raw = await input("What would you like to sell? (number): ");
   const choice = parseInt(raw, 10);
   if(isNaN(choice)){ print("Please enter a number!"); return; }
   if(choice >= 1 && choice <= sellable.length){
@@ -747,7 +727,7 @@ async function handleSelling(s){
     for(let i=0;i<price*amount;i++){
       PlayerInventory.push("coin");
     }
-    print(`\nSold ${amount}x ${item} for ${price*amount} coins!`);
+    print(`Sold ${amount}x ${item} for ${price*amount} coins!`);
   } else if(choice === sellable.length+1){
     print("Maybe next time!");
   } else {
@@ -756,31 +736,27 @@ async function handleSelling(s){
 }
 
 async function handleShopInteraction(s){
-  print(`\n${s.name}: "${s.greeting}"`);
+  print(`${s.name}: "${s.greeting}"`);
   while(true){
-    print(`\n${"=".repeat(50)}`);
+    print(`${"=".repeat(50)}`);
     print(`Your coins: ${PlayerInventory.filter(i=>i==="coin").length}`);
     print(`Your health: ${PlayerHealth}`);
-    print(`\n1. Buy items`);
+    print(`1. Buy items`);
     print(`2. Sell items`);
     print(`3. Leave shop`);
-    const choice = (await input("\nWhat would you like to do? ")).toLowerCase().trim();
+    const choice = (await input("What would you like to do? ")).toLowerCase().trim();
     if(choice === "1" || choice === "buy"){
       await handleBuying(s);
     } else if(choice === "2" || choice === "sell"){
       await handleSelling(s);
     } else if(choice === "3" || choice === "leave" || choice === "exit"){
-      print(`\n${s.name}: "Safe travels!"`);
+      print(`${s.name}: "Safe travels!"`);
       break;
     } else {
       print("Invalid choice!");
     }
   }
 }
-
-/* ---------------------------------------------------------------------- */
-/* Combat                                                                   */
-/* ---------------------------------------------------------------------- */
 
 function randint(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -792,10 +768,10 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
     return;
   }
 
-  print(`\n${"=".repeat(50)}`);
-  await typewriter(`\nYou engage the ${enemy.name} in combat!\n`);
   print(`${"=".repeat(50)}`);
-  await sleep(500);
+  await typewriter(`You engage the ${enemy.name} in combat!`);
+  print(`${"=".repeat(50)}`);
+  await sleep(2000);
 
   let playerDamage = 5;
   let weaponUsed = "fists";
@@ -826,15 +802,15 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
     await sleep(500);
   }
 
-  print(`\n${enemy.name} Health: ${enemyHealth}`);
+  print(`${enemy.name} Health: ${enemyHealth}`);
   print(`Your Health: ${PlayerHealth}`);
   print(`Your Weapon: ${weaponUsed} (Damage: ${playerDamage})`);
   if(prisonerDialogueDone2) print(`William's Bonus: +${williamBonus} damage`);
-
+  await sleep(2000)
   let turn = 1;
   while(enemyHealth > 0 && PlayerHealth > 0){
-    print(`\n--- Turn ${turn} ---`);
-    await sleep(500);
+    print(`--- Turn ${turn} ---`);
+    await sleep(2000);
 
     const totalDamage = playerDamage + williamBonus;
     enemyHealth -= totalDamage;
@@ -842,7 +818,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
 
     if(enemyHealth <= 0){
       enemyHealth = 0;
-      print(`\nThe ${enemy.name} has been defeated!`);
+      print(`The ${enemy.name} has been defeated!`);
       await sleep(2000);
       break;
     }
@@ -863,7 +839,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
 
     if(PlayerHealth <= 0){
       PlayerHealth = 0;
-      print(`\nThe ${enemy.name} has defeated you!`);
+      print(`The ${enemy.name} has defeated you!`);
       print("Your vision fades to black...");
       await sleep(3000);
       return;
@@ -873,8 +849,8 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
     turn += 1;
 
     if(turn % 3 === 0 && enemyHealth > 0 && PlayerHealth > 0){
-      print(`\n${"=".repeat(50)}`);
-      print("\nWhat do you want to do?");
+      print(`${"=".repeat(50)}`);
+      print("What do you want to do?");
       print("1. Continue fighting");
       print("2. Use healing item");
       print("3. Try to flee");
@@ -884,7 +860,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
         const healAmounts = {bread:30, bandage:50, cheese:20, gruel:10};
         const healingItems = PlayerInventory.filter(i=>["bread","bandage","cheese","gruel"].includes(i));
         if(healingItems.length){
-          print("\nHealing items:");
+          print("Healing items:");
           healingItems.forEach((item,i)=>{ print(`${i+1}. ${item}`); });
           print(`${healingItems.length+1}. Cancel`);
           const raw = await input("");
@@ -895,7 +871,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
             PlayerHealth = Math.min(100, PlayerHealth + heal);
             const idx = PlayerInventory.indexOf(item);
             PlayerInventory.splice(idx,1);
-            print(`\nYou use ${item} and restore ${heal} health!`);
+            print(`You use ${item} and restore ${heal} health!`);
             print(`Health: ${PlayerHealth}`);
           } else if(pick === healingItems.length+1){
             print("You decide to save your items.");
@@ -906,7 +882,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
           print("You have no healing items!");
         }
       } else if(choice === "3"){
-        print(`\nYou successfully flee from the ${enemy.name}!`);
+        print(`You successfully flee from the ${enemy.name}!`);
         await sleep(2000);
         return;
       }
@@ -914,7 +890,7 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
   }
 
   if(enemyHealth <= 0){
-    print(`\n${"=".repeat(50)}`);
+    print(`${"=".repeat(50)}`);
     await typewriter(`Victory! The ${enemy.name} has been slain!`);
     print(`${"=".repeat(50)}`);
 
@@ -937,31 +913,23 @@ async function handleEnemyInteraction(enemy, enemyRow, enemyCol){
   }
 }
 
-/* ---------------------------------------------------------------------- */
-/* NPC / Riddler                                                            */
-/* ---------------------------------------------------------------------- */
-
 async function handleNpcInteraction(npc, npcRow, npcCol){
   if(npc.type === "riddler"){
     if(!npc.solved){
-      print(`\n${npc.name} asks: "${npc.riddle}"`);
-      const answer = (await input("\nYour answer: ")).toLowerCase().trim();
+      print(`${npc.name} asks: "${npc.riddle}"`);
+      const answer = (await input("Your answer: ")).toLowerCase().trim();
       if(answer === npc.answer){
         npc.solved = true;
-        print(`\n${npc.name}: "${npc.dialogue_after}"`);
+        print(`${npc.name}: "${npc.dialogue_after}"`);
         Maze[npcRow][npcCol] = 0;
       } else {
-        print(`\n${npc.name}: Wrong! Try again when youre wiser.`);
+        print(`${npc.name}: Wrong! Try again when youre wiser.`);
       }
     } else {
       print("Riddler: Hello there");
     }
   }
 }
-
-/* ---------------------------------------------------------------------- */
-/* Prisoner dialogue                                                       */
-/* ---------------------------------------------------------------------- */
 
 async function askNumber(validSet){
   while(true){
@@ -975,38 +943,33 @@ async function askNumber(validSet){
 let playerName = "traveller";
 
 async function prisonerDialogue(){
-  await typewriter("\nPrisoner: help me...");
-  print("\n1 - What happened to you?");
+  await typewriter("Prisoner: help me...");
+  print("1 - What happened to you?");
   print("2 - Who are you?");
   let choice = await askNumber([1,2]);
 
   if(choice === 1){
-    print("");
     await dotCycle("Prisoner");
     await typewriter("Prisoner: I dont know");
     await typewriter("Prisoner: I was doing something until i think i was knocked out and trapped here");
-    print("\n1 - Who are you?");
+    print("1 - Who are you?");
     await askNumber([1]);
-    print("");
     await dotCycle("Prisoner");
-    print("Prisoner: My name is William, whats yours?");
+    await typewriter("Prisoner: My name is William, whats yours?");
     playerName = await input("");
-    print("");
     await dotCycle("Prisoner");
-    print("Prisoner: Right, nice to meet you", playerName, ",will you help me get out of here?");
-    print("\n1 - Yes");
+    print("William: Right, nice to meet you " + playerName + ",will you help me get out of here?");
+    print("1 - Yes");
     print("2 - No i have to go, im sorry");
     choice = await askNumber([1,2]);
     await prisonerAfterIntro(choice);
   } else if(choice === 2){
-    print("");
     await dotCycle("Prisoner");
-    print("Prisoner: My name is William, whats yours?");
+    await typewriter("Prisoner: My name is William, whats yours?");
     playerName = await input("");
-    print("");
     await dotCycle("Prisoner");
-    print("Prisoner: Right, nice to meet you", playerName, ",will you help me get out of here?");
-    print("\n1 - Yes");
+    await typewriter("Prisoner: Right, nice to meet you " + playerName + ", will you help me get out of here?");
+    print("1 - Yes");
     print("2 - No i have to go, im sorry");
     choice = await askNumber([1,2]);
     await prisonerAfterIntro(choice);
@@ -1015,43 +978,38 @@ async function prisonerDialogue(){
 
 async function prisonerAfterIntro(choice){
   if(choice === 1){
-    print("\nPrisoner: God bless you", playerName);
     await sleep(1000);
-    print("\nPrison: I belive that the time i was captured, the poeple who put me here went west from here");
+    await typewriter("William: God bless you " + playerName);
     await sleep(1000);
-    print("\nPrisoner: Im sure the key is in that direction");
-    print("\n1 - What type of key?");
+    await typewriter("William: I belive that the time i was captured, the poeple who put me here went west from here");
+    await sleep(1000);
+    await typewriter("William: Im sure the key is in that direction");
+    print("1 - What type of key?");
     await askNumber([1]);
     await sleep(2000);
-    print("\nWilliam: I believe it was an iron key, i remember the shine it gave");
+    await typewriter("William: I believe it was an iron key, i remember the shine it gave");
     await sleep(2000);
-    print("\n1 - Ill be back soon ,sit tight");
+    print("1 - Ill be back soon ,sit tight");
     await askNumber([1]);
     await sleep(2000);
-    print("\nWilliam: Thank you and stay safe", playerName);
+    await typewriter("William: Thank you and stay safe", playerName);
   } else if(choice === 2){
-    print("I understand, i hope you find your way out", playerName);
+    await typewriter("I understand, i hope you find your way out", playerName);
   }
 }
 
 async function prisonerDialogue2(){
-  print("");
   await dotCycle("Prisoner");
   await typewriter("Prisoner: Well, ill be damned!");
-  await typewriter("\nWilliam: You found it!");
-  await typewriter("\nWilliam: I will be forever grateful friend!");
-  await typewriter("\nWilliam: I will join you on this journey");
-  print("");
+  await typewriter("William: You found it!");
+  await typewriter("William: I will be forever grateful friend!");
+  await typewriter("William: I will join you on this journey");
   await dotCycle("Prisoner");
   await typewriter("William: Till death do us part...");
-  print("\nWilliam will now aid you in battle as a gratitude of your kindness!");
+  print("William will now aid you in battle as a gratitude of your kindness!");
   print("You can give him weapons using the 'give' command to make him stronger in battle");
   print("You can take the weapon back by using the 'take' command");
 }
-
-/* ---------------------------------------------------------------------- */
-/* Movement helper                                                         */
-/* ---------------------------------------------------------------------- */
 
 async function afterMoveReport(r,c){
   checkForTrap(r,c);
@@ -1120,12 +1078,8 @@ async function tryMove(dr, dc){
   }
 }
 
-/* ---------------------------------------------------------------------- */
-/* Main game loop                                                          */
-/* ---------------------------------------------------------------------- */
-
 async function mainGame(){
-  print("\nWest side of the maze");
+  print("West side of the maze");
   print("There is a lonely letter left on the ground");
 
   while(true){
@@ -1157,19 +1111,19 @@ async function mainGame(){
         const dir = (await input("")).toLowerCase().trim();
         if(dir === "north" || dir === "n"){
           row=0; col=10; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
-          print("North Side of the maze\n");
+          print("North Side of the maze");
           print("You are at the north entrance of the maze, there is a wall to the west and east of you with a path going south");
         } else if(dir === "south" || dir === "s"){
           row=19; col=4; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
-          print("South Side of the maze\n");
+          print("South Side of the maze");
           print("You are at the south entrance of the maze, there is a wall to the west and east of you with a path going north");
         } else if(dir === "east" || dir === "e"){
           row=9; col=19; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
-          print("East Side of the maze\n");
+          print("East Side of the maze");
           print("You are at the east entrance of the maze, there is a wall to the north and south of you with a path going west");
         } else if(dir === "west" || dir === "w"){
           row=5; col=0; PlayerPos=[row,col]; VisitedRooms.add(key(row,col));
-          print("West Side of the maze\n");
+          print("West Side of the maze");
           print("You are at the west entrance of the maze, there is a wall to the north and south of you with a path going west");
         } else {
           print("What does", dir, "even mean?");
@@ -1447,14 +1401,14 @@ async function mainGame(){
               prisonerDialogueDone = true;
               await prisonerDialogue();
             } else {
-              await typewriter("\nWilliam: Have you found the key?");
-              print("\n1 - Yes");
+              await typewriter("William: Have you found the key?");
+              print("1 - Yes");
               print("2 - No");
               const choice = await askNumber([1,2]);
               if(choice === 2){
-                await typewriter("\nWilliam: Well take your time, im not going anywhere");
+                await typewriter("William: Well take your time, im not going anywhere");
               } else {
-                await typewriter("\nWilliam: Well then get me out here!");
+                await typewriter("William: Well then get me out here!");
               }
             }
           } else {
@@ -1462,7 +1416,7 @@ async function mainGame(){
               prisonerDialogueDone2 = true;
               await prisonerDialogue2();
             } else {
-              await typewriter("\nWilliam: Less talking, more escaping please");
+              await typewriter("William: Less talking, more escaping please");
             }
           }
         } else if(npc.type === "shop"){
@@ -1540,8 +1494,6 @@ These are the commands that exist in the game, USE THEM and please make sure to 
     use - This will allow you to use the item of choosing from your inventory
     talk - Allows you to talk to NPCs near you
     fight - Allows you to fight enemies near you
-    template - Gives you a template of the map of the maze
-    map - Shows your current position in the maze
     cheats - This will give you invincibility, all of the items to beat the game and prints you a map of the whole maze
 Top tips:
     Whenever you use an item, make sure you spell it EXACTLY the same as when you see it
@@ -1566,37 +1518,6 @@ It is highly recommended to keep track of what the maze looks like so you can ba
 (type "template" for the template of what the maze looks lke or "cheats" for invincibility, all of the items to beat the game and a map of the whole maze)`);
     }
 
-    else if(command === "template" || command === "t"){
-      print(`
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 9, 9, 0, 0, 0, 0, 0, 0, 0, 0, 2
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 9, 9, 0, 0, 0, 0, 0, 0, 0, 1, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
-    1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-
-The 1's represent walls
-The 9's represent the final exit
-the 2's represent the 4 entrances
-Thats all of the info that im giving you
-Good luck traveller
-`);
-    }
-
     else if(command === "cheats"){
       print("You really thought i was going to give you all that? LOOOOOL Nice try");
     }
@@ -1616,19 +1537,6 @@ Good luck traveller
 
     else if(command === "swear"){
       print(randint(1,2) === 1 ? "F*ck" : "Sh*t");
-    }
-
-    else if(command === "map"){
-      print("Your map:");
-      let mapText = "";
-      for(let r=0;r<20;r++){
-        let line = "";
-        for(let c=0;c<20;c++){
-          line += (r===row && c===col) ? "@ " : "? ";
-        }
-        mapText += line + "\n";
-      }
-      print(mapText);
     }
 
     else if(command === "hello"){ print("Good day."); }
@@ -1654,13 +1562,13 @@ Good luck traveller
 
   if(lost === 1){
     await sleep(1500);
-    await typewriter("\nOh dear, you died ");
+    await typewriter("Oh dear, you died ");
     await sleep(500);
-    await typewriter("\nIt happens to the best of us! ");
-    await typewriter("\nAll it takes is a retry and eventually youll make it");
-    await typewriter("\nHere are some stats of your journey");
-    print("\n" + "=".repeat(64));
-    print("\nYou took", stepCount, "steps");
+    await typewriter("It happens to the best of us! ");
+    await typewriter("All it takes is a retry and eventually youll make it");
+    await typewriter("Here are some stats of your journey");
+    print("" + "=".repeat(64));
+    print("You took", stepCount, "steps");
     const elapsed = (Date.now() - startTime)/1000;
     const minutes = Math.floor(elapsed/60);
     const seconds = Math.floor(elapsed%60);
@@ -1674,17 +1582,17 @@ Good luck traveller
       print("Hope you had fun!");
     }
   } else {
-    await typewriter("\nWow you made it! Well done traveller");
+    await typewriter("Wow you made it! Well done traveller");
     await sleep(1500);
-    await typewriter("\nHere are some stats of your journey");
-    print("\n" + "=".repeat(64));
-    print("\nIt took you", stepCount, "steps to complete your journey");
+    await typewriter("Here are some stats of your journey");
+    print("" + "=".repeat(64));
+    print("It took you", stepCount, "steps to complete your journey");
     const elapsed = (Date.now() - startTime)/1000;
     const minutes = Math.floor(elapsed/60);
     const seconds = Math.floor(elapsed%60);
     print(`and ${minutes} minutes and ${seconds} seconds to complete the game!`);
     await sleep(1500);
-    await typewriter("\nYou now step and see the world for the first time in 7 years..");
+    await typewriter("You now step and see the world for the first time in 7 years..");
   }
 }
 
