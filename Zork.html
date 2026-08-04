@@ -53,8 +53,8 @@
   #output{
     flex:1;
     padding:20px 28px 30px 28px;
-    font-size:1.05em;
-    line-height:1.55;
+    font-size:1em;
+    line-height:1;
     overflow-y:auto;
     white-space:pre-wrap;
   }
@@ -136,7 +136,7 @@ function printRaw(text, cls){
 }
 
 function print(...parts){
-  printRaw(parts.join(" "));
+  printRaw(parts.join(""));
 }
 
 function sys(text){
@@ -170,6 +170,7 @@ function waitForInput(){
 
     const promptSpan = document.createElement('span');
     promptSpan.className = 'prompt-inline';
+    print()
     promptSpan.textContent = '>';
 
     const inp = document.createElement('input');
@@ -1016,13 +1017,19 @@ async function afterMoveReport(r,c){
   print(getRoomDescription(r,c));
   const pos = key(r,c);
   if(pos in RoomItems && RoomItems[pos].length){
-    print("You see:", RoomItems[pos].join(", "));
+    print("You see: ", RoomItems[pos].join(", "));
   }
 }
 
 async function tryMove(dr, dc){
   const targetRow = row + dr;
   const targetCol = col + dc;
+  
+  if(targetRow < 0 || targetRow >= Maze.length || targetCol < 0 || targetCol >= Maze[0].length){
+    print("You cannot exit the maze this way");
+    return;
+  }
+  
   const targetVal = Maze[targetRow][targetCol];
 
   if(targetVal === 8){
