@@ -233,8 +233,8 @@ async function dotCycle(label){
 const MAX_WEIGHT = 20;
 let row = 5, col = 0;
 let PlayerPos = [row, col];
-let PlayerInventory = [];
-let PlayerHealth = 100;
+let PlayerInventory = ["bread","bandage","gruel","cheese"];
+let PlayerHealth = 1;
 let lost = 0;
 let stepCount = 0;
 let prisonerDialogueDone = false;
@@ -1154,11 +1154,11 @@ async function mainGame(){
       print("Look at what?");
       const target = (await input("")).toLowerCase().trim();
       if(target === "health" || target === "h"){
-        print("You have: ", PlayerHealth, "health");
+        print("You have: ", PlayerHealth, " health");
       } else if(target === "inventory" || target === "i"){
         if(PlayerInventory.length){
           const w = getInventoryWeight();
-          print(`You are carrying (${w}/${MAX_WEIGHT} weight):`);
+          print(`You are carrying ${w}/${MAX_WEIGHT} weight:`);
           print(PlayerInventory.join(", "));
         } else {
           print("You are not carrying anything");
@@ -1185,7 +1185,7 @@ async function mainGame(){
           print(`There is a ${enemy.name} ${direction} to you`);
         }
         if(pos in RoomItems && RoomItems[pos].length){
-          print("You see:", RoomItems[pos].join(", "));
+          print("You see: ", RoomItems[pos].join(", "));
         } else {
           print("There are no useful items here");
         }
@@ -1349,21 +1349,77 @@ async function mainGame(){
       const target = (await input("")).toLowerCase().trim();
       if(PlayerInventory.includes(target)){
         if(target === "bread"){
-          PlayerHealth = Math.min(100, PlayerHealth+30);
-          PlayerInventory.splice(PlayerInventory.indexOf("bread"),1);
-          print("You just gained 30 health, you now have", PlayerHealth, "health");
+          if (PlayerHealth + 30 > 100){
+            print("If you use the bread, you will waste some health points, are you sure you want to use it?")
+            const target = (await input("")).toLowerCase().trim();
+            if (target === "yes"){
+              PlayerHealth = Math.min(100, PlayerHealth+30);
+              PlayerInventory.splice(PlayerInventory.indexOf("bread"),1);
+              print("You just gained 30 health, you now have ", PlayerHealth, " health");  
+            } else if (target === "no"){
+              print("You have decided to not use your bread");
+            } else {
+              print("Please answer with a (yes / no)")
+            }
+          } else {
+              PlayerHealth = Math.min(100, PlayerHealth+30);
+              PlayerInventory.splice(PlayerInventory.indexOf("bread"),1);
+              print("You just gained 30 health, you now have ", PlayerHealth, " health");
+          }
         } else if(target === "bandage"){
-          PlayerHealth = Math.min(100, PlayerHealth+50);
-          PlayerInventory.splice(PlayerInventory.indexOf("bandage"),1);
-          print("You just gained 50 health, you now have", PlayerHealth, "health");
+            if (PlayerHealth + 50 > 100){
+              print("If you use the bandage, you will waste some health points, are you sure you want to use it?")
+              const target = (await input("")).toLowerCase().trim();
+              if (target === "yes"){
+                PlayerHealth = Math.min(100, PlayerHealth+50);
+                PlayerInventory.splice(PlayerInventory.indexOf("bandage"),1);
+                print("You just gained 50 health, you now have ", PlayerHealth, " health");
+              } else if (target === "no"){
+                print("You have decided to not use your bandage");
+              } else {
+                print("Please answer with a (yes / no)");
+              }
+            } else {
+              PlayerHealth = Math.min(100, PlayerHealth+50);
+              PlayerInventory.splice(PlayerInventory.indexOf("bandage"),1);
+              print("You just gained 50 health, you now have ", PlayerHealth, " health");
+            }
         } else if(target === "cheese"){
-          PlayerHealth = Math.min(100, PlayerHealth+20);
-          PlayerInventory.splice(PlayerInventory.indexOf("cheese"),1);
-          print("You just gained 20 health, you now have", PlayerHealth, "health");
+            if (PlayerHealth + 20 > 100){
+              print("If you use the cheese, you will waste some health points, are you sure you want to use it?")
+              const target = (await input("")).toLowerCase().trim();
+              if (target === "yes"){
+                PlayerHealth = Math.min(100, PlayerHealth+20);
+                PlayerInventory.splice(PlayerInventory.indexOf("cheese"),1);
+                print("You just gained 20 health, you now have ", PlayerHealth, " health");
+              } else if (target === "no"){
+                print("You have decided to not use your cheese")
+              } else {
+                print("Please answer with a (yes / no)")
+              }
+            } else {
+              PlayerHealth = Math.min(100, PlayerHealth+20);
+              PlayerInventory.splice(PlayerInventory.indexOf("cheese"),1);
+              print("You just gained 20 health, you now have ", PlayerHealth, " health");
+            }         
         } else if(target === "gruel"){
-          PlayerHealth = Math.min(100, PlayerHealth+10);
-          PlayerInventory.splice(PlayerInventory.indexOf("gruel"),1);
-          print("You just gained 10 health, you now have", PlayerHealth, "health");
+          if (PlayerHealth + 10 > 100){
+              print("If you use the gruel, you will waste some health points, are you sure you want to use it?")
+              const target = (await input("")).toLowerCase().trim();
+              if (target === "yes"){
+                PlayerHealth = Math.min(100, PlayerHealth+10);
+                PlayerInventory.splice(PlayerInventory.indexOf("gruel"),1);
+                print("You just gained 10 health, you now have ", PlayerHealth, " health");
+              } else if (target === "no"){
+                print("You have decided to not use your gruel")
+              } else {
+                print("Please answer with a (yes / no)")
+              }
+            } else {
+              PlayerHealth = Math.min(100, PlayerHealth+10);
+              PlayerInventory.splice(PlayerInventory.indexOf("gruel"),1);
+              print("You just gained 10 health, you now have ", PlayerHealth, " health");
+            }         
         } else if(["brass key","copper key","iron key","gold key"].includes(target)){
           const adjDoors = getAdjacentDoors(row,col);
           if(adjDoors.length){
