@@ -11,8 +11,7 @@
     --ink:#ffffff;
     --ink-soft:#ffffff;
     --rule:#ffffff;
-    --accent:#0ccad8c9;
-  }
+    --accent:#0ccad8c9;}
   html,body{
     height:100%;
     margin:0;
@@ -20,8 +19,7 @@
     background-image:
       radial-gradient(ellipse at top, #000000 0%, #000000 60%, #000000 100%);
     font-family:Georgia,'Times New Roman',serif;
-    color:var(--ink);
-  }
+    color:var(--ink);}
   #page{
     max-width:900px;
     margin:0 auto;
@@ -31,56 +29,46 @@
     display:flex;
     flex-direction:column;
     border-left:1px solid var(--paper-edge);
-    border-right:1px solid var(--paper-edge);
-  }
+    border-right:1px solid var(--paper-edge);}
   header{
     padding:18px 28px 10px 28px;
-    border-bottom:1px solid var(--rule);
-  }
+    border-bottom:1px solid var(--rule);}
   header h1{
     font-size:1.4em;
     margin:0;
     font-weight:normal;
     letter-spacing:0.04em;
-    color:var(--ink);
-  }
+    color:var(--ink);}
   header .byline{
     font-size:0.78em;
     color:var(--ink-soft);
     font-style:italic;
-    margin-top:2px;
-  }
+    margin-top:2px;}
   #output{
     flex:1;
     padding:20px 28px 30px 28px;
     font-size:1em;
     line-height:1;
     overflow-y:auto;
-    white-space:pre-wrap;
-  }
+    white-space:pre-wrap;}
   #output p{
-    margin:0 0 0.85em 0;
-  }
+    margin:0 0 0.85em 0;}
   #output p.cmdline{
     color:var(--accent);
-    font-weight:bold;
-  }
+    font-weight:bold;}
   #output p.sys{
     color:var(--ink-soft);
-    font-style:italic;
-  }
+    font-style:italic;}
   .input-row{
     display:flex;
     align-items:baseline;
-    margin:0 0 0.85em 0;
-  }
+    margin:0 0 0.85em 0;}
   .prompt-inline{
     font-weight:bold;
     margin-right:6px;
     color:var(--accent);
     font-size:1.05em;
-    flex-shrink:0;
-  }
+    flex-shrink:0;}
   .cmd-input-inline{
     flex:1;
     border:none;
@@ -91,19 +79,16 @@
     color:var(--ink);
     caret-color:var(--accent);
     padding:0;
-    margin:0;
-  }
+    margin:0;}
   #footer{
     text-align:center;
     font-size:0.72em;
     color:var(--ink-soft);
     padding:6px 0 14px 0;
-    border-top:1px solid var(--rule);
-  }
+    border-top:1px solid var(--rule);}
   ::selection{ background:#d6cba5; color:#000; }
   @media (max-width:600px){
-    header, #output, #footer{ padding-left:16px; padding-right:16px; }
-  }
+    header, #output, #footer{ padding-left:16px; padding-right:16px; }}
 </style>
 </head>
 <body>
@@ -233,7 +218,7 @@ async function dotCycle(label){
 const MAX_WEIGHT = 20;
 let row = 5, col = 0;
 let PlayerPos = [row, col];
-let PlayerInventory = ["bread","bandage","gruel","cheese"];
+let PlayerInventory = [];
 let PlayerHealth = 1;
 let lost = 0;
 let stepCount = 0;
@@ -242,6 +227,7 @@ let prisonerDialogueDone2 = false;
 const VisitedRooms = new Set();
 let williamMulti = 1.0;
 let williamWeapon = null;
+let gameStarted = false;
 const startTime = Date.now();
 
 function key(r,c){ return r + "," + c; }
@@ -1088,7 +1074,7 @@ async function tryMove(dr, dc){
 async function mainGame(){
   print("West side of the maze");
   print("There is a lonely letter left on the ground");
-
+  gameStarted = true;
   while(true){
     stepCount += 1;
 
@@ -1158,8 +1144,8 @@ async function mainGame(){
       } else if(target === "inventory" || target === "i"){
         if(PlayerInventory.length){
           const w = getInventoryWeight();
-          print(`You are carrying ${w}/${MAX_WEIGHT} weight:`);
-          print(PlayerInventory.join(", "));
+          print(`You are carrying: ${PlayerInventory.join(", ")}`);
+          print(w , "/20 weight");
         } else {
           print("You are not carrying anything");
         }
@@ -1557,6 +1543,7 @@ These are the commands that exist in the game, USE THEM and please make sure to 
     use - This will allow you to use the item of choosing from your inventory
     talk - Allows you to talk to NPCs near you
     fight - Allows you to fight enemies near you
+    time - Lets you see how long you were playing the game
     cheats - This will give you invincibility, all of the items to beat the game and prints you a map of the whole maze
 Top tips:
     Whenever you use an item, make sure you spell it EXACTLY the same as when you see it
@@ -1568,7 +1555,6 @@ Top tips:
         w - west
     This also applies to;
         i - inventory
-        t - template
         h - health
         `);
     }
@@ -1578,7 +1564,7 @@ Top tips:
 To win, you have to enter the maze and find the centre to escape through the ladder to the surface of the earth
 You have to make sure you are healthy, have good weapons and items that help you to kill the final boss in the centre
 It is highly recommended to keep track of what the maze looks like so you can backtrack and go into different areas
-(type "template" for the template of what the maze looks lke or "cheats" for invincibility, all of the items to beat the game and a map of the whole maze)`);
+(type "cheats" for invincibility, all of the items to beat the game and a map of the whole maze)`);
     }
 
     else if(command === "cheats"){
@@ -1602,9 +1588,18 @@ It is highly recommended to keep track of what the maze looks like so you can ba
       print(randint(1,2) === 1 ? "F*ck" : "Sh*t");
     }
 
-    else if(command === "hello"){ print("Good day."); }
-    else if(command === "what"){ print("What do you want to what is?"); }
-    else if(command === "where"){ print("Where do you want to where is?"); }
+    else if(command === "hello"){
+      print("Good day."); 
+    }
+    
+    else if(command === "what"){ 
+      print("What do you want to what is?"); 
+    }
+    
+    else if(command === "where"){ 
+      print("Where do you want to where is?"); 
+    }
+    
     else if(command === "time"){
       const elapsed = (Date.now() - startTime)/1000;
       const minutes = Math.floor(elapsed/60);
@@ -1612,32 +1607,40 @@ It is highly recommended to keep track of what the maze looks like so you can ba
       if(minutes === 0) print(`You have been playing for ${seconds} seconds too long`);
       else print(`You have been playing for ${minutes} minutes and ${seconds} seconds too long`);
     }
+    
     else if(command === "shout" || command === "scream" || command === "yell"){
       print("AAAARRRRRRRGGGGGHHHHhhhhh");
     }
+
+    else if(command === "@"){
+      print("verify.exe101@gmail.com")
+    }
+    
     else if(command === ""){
       print("I beg your pardon?");
     }
+    
     else {
       print("Thats not a verb i recognise");
     }
   }
 
   if(lost === 1){
+    gameStarted = False;
     await sleep(1500);
     await typewriter("Oh dear, you died ");
     await sleep(500);
-    await typewriter("It happens to the best of us! ");
+    await typewriter("It happens to the best of us");
     await typewriter("All it takes is a retry and eventually youll make it");
     await typewriter("Here are some stats of your journey");
     print("" + "=".repeat(64));
-    print("You took", stepCount, "steps");
+    print("You took ", stepCount, " steps");
     const elapsed = (Date.now() - startTime)/1000;
     const minutes = Math.floor(elapsed/60);
     const seconds = Math.floor(elapsed%60);
     await sleep(500);
-    print(`You wasted ${minutes} minutes and ${seconds} seconds`);
-    print("Would you like to play again?");
+    print(`You wasted ${minutes} minutes and ${seconds} seconds of your time`);
+    print("Would you like to try again?");
     const again = await input("");
     if(again.toLowerCase().trim() === "yes"){
       resetAndRestart();
@@ -1659,10 +1662,16 @@ It is highly recommended to keep track of what the maze looks like so you can ba
   }
 }
 
+window.addEventListener('beforeunload', function(e) {
+  if(gameStarted) {
+      e.preventDefault();
+      e.returnValue = 'You will lose all game progress. Are you sure you want to leave?';
+      return 'You will lose all game progress. Are you sure you want to leave?';
+  }
+});
 function resetAndRestart(){
   location.reload();
 }
-
 mainGame().catch(err=>{
   sys("An error occurred: " + err.message);
   console.error(err);
