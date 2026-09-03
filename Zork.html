@@ -1619,6 +1619,48 @@ It is highly recommended to keep track of what the maze looks like so you can ba
     else if(command === ""){
       print("I beg your pardon?");
     }
+
+// EASTER EGGS
+
+    else if(command === "jump"){
+      const num = randint(1, 5);
+      print(num === 1 ? "Do you expect me to applaud?" : 
+      num === 2 ? "Have you tried hopping around the dungeon, too?" : 
+      num === 3 ? "Are you enjoying yourself?" : 
+      num === 4 ? "Very good, now you can go to the second grade" : "Wheeeeeeeeee!!!!!");
+    }
+
+    else if(command === "shut up"){
+      print("Rude...");
+    }
+
+    else if(command === "yes"){
+      print("Yes what?");
+    }
+
+    else if(command === "no"){
+      print("No what?");
+    }
+
+    else if(command === "2010"){
+      print("How do you know my birth year!?");
+    }
+
+    else if(command === "aron"){
+      print("How do you know my name!?");
+    }
+
+    else if(command === "bar"){
+      print("Well, FOO, BAR, and BLETCH to you too!");
+    }
+
+    else if(command === "lol"){
+      print("What are you laughing at?");
+    }
+
+    else if(command === "zork"){
+      print("At you service!");
+    }
     
     else {
       print("Thats not a verb i recognise");
