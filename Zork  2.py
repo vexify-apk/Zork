@@ -1,6 +1,91 @@
+# Create a design that thinks about the following:
+# 1. Who are your characters?
+# 2. Are they playable?
+# 3. Who are the non playable characters?
+# 4. What skills or weapons can you pick up along the way?
+# 5. What items can you carry and how many?
+# 6. How do you win?
+# 7. Will you have health or lives?
+# 8. How do you manoeuvre around?
+
+# Zork 2 game game plan:
+
+# Main objective:
+#     Make your way to the centre of the maze to escape as the maze is like a underground dungeon 
+#     Try not to die by taking the right paths and have a sufficient amount of health
+
+# Map:
+#     Maze
+#         There will be multiple rooms within the maze that have different characters / items etc.
+
+# Characters:
+#     Probaly a shopkeeper that you can sell items to and he gives you a key or something 
+#     Final Boss at the end? 
+#     Interesting idea: 2 characters in a room and 1 only tells the truth and one tells only lies and you need to make sure to 
+#     take the right path to not die 
+#     There will be a character just like "The Riddler" from Batman, so you can only pass if you answer the riddle correctly, the riddle will be 
+    
+#     "I am ever present; nothing escapes my my view. My nature
+#     never changes, but by it, I change all. Even the strongest 
+#     warrior falls when I pass him by. What am I?"
+
+#     Only playable is me?
+
+# Items:
+#     Gotta have a sword
+#     Mace
+#     Rusty Dagger
+#     Spear
+#     Key for some doors
+#     Bread to replenish hp
+#     Water to replenish hp
+#     Bandage to replensih hp
+#     Gruel to replenish hp 
+#     Coins to buy stuff from the shopkeeper ALL  ABOVE
+#     A thing that can distract enemies (like a stone maybe) ? There is a stone but no way in distracting enemies
+#     An introduction letter to the game to explain what happens (like in Zork) 
+#     A bucket maybe?? (but no idea what it could be used for)
+
+# Skills:
+#     Rather than skills, you can probably gather 
+#     intel points then type a command that tells you
+#     what you know rather than going back to check
+
+# Movement:
+#     Press a look function then it lists you the rooms you can enter 
+#     It will say things that are in the room and which direction you can go in 
+#     Obvs north,east,south and west movements 
+
+# Game Mechanics:
+#     For the inventory, you can only hold a certian number of items (based on weight / size or just pure
+#     array of positions that can hold an item but i havent decided) to do certian quests
+#     and to stop the player from picking up everything they see and making the game too easy  (i decided with weight)
+
+#     For the beast / monster fighting, i have an idea of needing minimum requirements to defeat a certian monster,
+#     for example, if you have max health and stamina (or energy or food) and a weapon, then you can defeat it, and if not
+#     you die. 
+
+#     Also for an encounter, there will be a prisoner in a cell (as it is a dungeon) and you have the option to help him
+#     but when you do, he kills you if you dont have enough health. 
+
+#     For the combat aspect of the game, it will work as a requrement system rather than a full blown battle scene as im not that good at coding, so
+#     for example, if a requiremnt to beat an enemy is to have 70 health or more and a sword or better, then it will  the players status to those requirments, so if the player is true to both (more than 70 hp and a sword) then they win no problem, if they only pass 1 of the requiremtns, then they leave the fight with half health and if they meet niether of the requirements , they lose all of their health and lose
+#     
+    
+#     When you have bread, you can leave breadcrumbs to keep track of how to go back 
+
+#     Traps - so when the player is on a certian tile, they lose a certian amount of hp so they have to be careful and keep track of what
+#     paths are safe or not
+
+
+#     Extra:
+#         Some file management to load a previous game to not lose progress
+
 import time
 import random
-import sys
+import sys, subprocess
+import os
+import ast
 
 def Zork_2():
     start_time = time.time()
@@ -47,13 +132,13 @@ def Zork_2():
         (19, 4): "You are at the south entrance of the maze, there is a wall to the west and east of you with a path going north",
         (9, 19): "You are at the east entrance of the maze, there is a wall to the north and south of you with a path going west",
         (5, 0): "You are at the west entrance of the maze, there is a wall to the north and south of you with a path going east",
-
+        #The rest
         (1, 1): "There is a wall to the north and west of you with a path going east and you see a door to your south",
         (1, 2): "There is a wall to the north and south of you with a path going east and west",
         (1, 3): "There is a wall to the north and east of you with a path going south and west",
         (1, 7): "There is a wall to the north and west of you with a path going south and east",
         (1, 8): "There is a wall to the north and east of you with a path going south and west",
-        (1, 10): "There is s wall to your west but a long corridor to your east and you glimpse a candle light to your south and the exit of the maze to your north",
+        (1, 10): "There is a wall to your west of you with a path going north and south and you can see a long corridor to your east",
         (1, 11): "There is a wall to the north and south of you with a path going east and west",
         (1, 12): "There is a wall to the north and south of you with a path going east and west",
         (1, 13): "There is a wall to the north of you with a path going east, and west and you can see a room to your south",
@@ -68,21 +153,21 @@ def Zork_2():
         (2, 6): "There is a wall to the north and south of you with a path going east and west",
         (2, 7): "There is a wall to the south of you with a path going north, east, and west",
         (2, 8): "There is a wall to the east of you with a path going north, south, and west",
-        (2, 10): "There is a wall to the west and east of you with a path going north and south",
-        (2, 13): "There is a wall to the west and east of you with a path going north and south",
+        (2, 10): "There is a wall to the west and east of you with a path going north and south and you see a room to your south",
+        (2, 13): "There is a wall to the west and east of you with a path going north and you can see a large room to your south",
         (2, 16): "There is a wall to the west and east of you with a path going north and south",
         (2, 18): "There is a wall to the west and east of you covered in the rats blood with a path going north and south",
         (3, 1): "There is a wall to the west and east of you with a path going south and a you see a door to you north",
         (3, 5): "There is a wall to the west and east of you with a path going north and south",
         (3, 8): "There is a wall to the west and east of you with a path going north and south",
-        (3, 10): "There is a wall to the south, west, and east of you with a path going north",
+        (3, 10): "There is a wall to the south, west, and east of you and you can see a large room to your north",
         (3, 12): "There is a wall to the north and west of you with a path going south and east",
         (3, 13): "There is a wall to the east of you with a path going north, south, and west",
         (3, 16): "There is a wall to the west of you with a path going north, south, and east",
         (3, 17): "There is a wall to the north and south of you with a path going east and west",
-        (3, 18): "There is a wall to the south and east of you with a path west and you can see a rat to your north",
+        (3, 18): "There is a wall to the south and east of you with a path west and you can see a large rat to your north",
         (4, 1): "There is a wall to the west of you with a path going north, south, and east",
-        (4, 2): "There is a wall to the north and south of you with a path going east and west",
+        (4, 2): "There is a wall to the north and south of you with a path going west and you can see a room to your east",
         (4, 3): "You are in a dark room with a table in the far corner with wall all around you apart from a path going west",
         (4, 5): "There is a wall to the west and east of you with a path going north and south",
         (4, 7): "There is a wall to the north and west of you with a path going south and east",
@@ -93,8 +178,8 @@ def Zork_2():
         (5, 1): "There is a wall to the south and east of you with a path going north and west",
         (5, 5): "There is a wall to the west and east of you with a path going north and south",
         (5, 7): "There is a wall to the west and east of you with a path going north and south",
-        (5, 12): "There is a wall to the west and east of you with a path going north and south",
-        (5, 16): "There is a wall to the west of you with a path going north and east while being met with a door to you north",
+        (5, 12): "There is a wall to the west and east of you with a path going south and you can see a large room to your north",
+        (5, 16): "There is a wall to the west of you with a path going north and east while being met with a door to you south",
         (5, 17): "There is a wall to the north and south of you with a path going east and west",
         (5, 18): "There is a wall to the north and east of you with a path going south and west",
         (6, 3): "There is a wall to the north, west, and east of you with a path going south",
@@ -119,20 +204,20 @@ def Zork_2():
         (7, 14): "There is a wall to the south and west of you with a path going north and east",
         (7, 15): "There is a wall to the north and south of you with a path going east and west",
         (7, 16): "There is a wall to the south and east of you with a path west and you are met with a door to your north",
-        (7, 18): "There is a wall to the south, west, and east of you with a path going north",
+        (7, 18): "You are at a dead end with a path only going north",
         (8, 1): "There is a wall to the west and east of you with a path going north and south",
         (8, 5): "There is a wall to the west and east of you with a path going north and south",
         (8, 7): "There is a wall to the west and east of you with a path going north and south",
         (8, 12): "There is a wall to the west and east of you with a path going north and south",
-        (9, 1): "There is a wall to the west and east of you with a path going north and south",
+        (9, 1): "There is a wall to the west and east of you with the riddler to your south and (enemy) to your north",
         (9, 3): "There is a wall to the north, south, and west of you with a path going east",
         (9, 4): "There is a wall to the north of you with a path going south, east, and west",
         (9, 5): "There is a wall to the east of you with a path going north, south, and west",
         (9, 7): "There is a wall to the west and east of you with a path going north and south",
         (9, 9): "There is a wall to the north and west of you with a path going south and east",
         (9, 10): "There is a wall to the north of you with a path going south, east, and west",
-        (9, 11): "There is a wall to the north and south of you with a path going east and west",
-        (9, 12): "There is a wall to the south and east of you with a path going north and west",
+        (9, 11): "There is a wall to the north and south of you with a path going east and the minotaur to your west",
+        (9, 12): "There is a wall to the south and east of you with a path going north and and you can see a gold door to your west",
         (9, 14): "There is a wall to the north and west of you with a path going south and east",
         (9, 15): "There is a wall to the north and east of you with a path going south and west",
         (9, 17): "There is a wall to the north and west of you with a path going south and east",
@@ -147,16 +232,16 @@ def Zork_2():
         (10, 15): "There is a wall to the south of you with a path going north, east, and west",
         (10, 16): "There is a wall to the north and south of you with a path going east and west",
         (10, 17): "There is a wall to the east of you with a path going north, south, and west",
-        (11, 1): "There is a wall to the west and east of you with a path going south and mysterous man to your south.",
+        (11, 1): "There is a wall to the west and east of you with a path going south and you can see a mysterous man to your north",
         (11, 4): "There is a wall to the west of you with a path going north, south, and east",
         (11, 5): "There is a wall to the south of you with a path going north, east, and west",
         (11, 6): "There is a wall to the south of you with a path going north, east, and west",
         (11, 7): "There is a wall to the east of you with a path going north, south, and west",
-        (11, 14): "There is a wall to the west and east of you with a path going north and south",
+        (11, 14): "There is a wall to the west and east of you with a path going south and you can see a large room to your north",
         (11, 17): "There is a wall to the west and east of you with a path going north and south",
         (12, 1): "There is a wall to the south and west of you with a path going north and east",
         (12, 2): "There is a wall to the north and east of you with a path going south and west",
-        (12, 4): "There is a wall to the west and east of you with a path going north and south",
+        (12, 4): "There is a wall to the west and east of you with a path going north and you can see a skeleton to your south",
         (12, 7): "There is a wall to the south and west of you with a path going north and east",
         (12, 8): "There is a wall to the north and east of you with a path going south and west",
         (12, 12): "There is a wall to the north and west of you with a path going south and east",
@@ -168,24 +253,24 @@ def Zork_2():
         (13, 2): "There is a wall to the west and east of you with a path going north and south",
         (13, 4): "There is a wall to the west and east of you with a path going north and south",
         (13, 8): "There is a wall to the south and west of you with a path going north and east",
-        (13, 9): "There is a wall to the north and south of you with a path going east and west",
+        (13, 9): "There is a wall to the north and south of you with a path going west and you can see a (enemy) to your east",
         (13, 10): "There is a wall to the north and south of you with a path going east and west",
-        (13, 11): "There is a wall to the north and south of you with a path going east and west",
+        (13, 11): "There is a wall to the north and south of you with a path going east and and you can see a (enemy) to your east",
         (13, 12): "There is a wall to the south and east of you with a path going north and west",
         (13, 16): "There is a wall to the west and east of you with a path going north and south",
         (13, 18): "There is a wall to the west and east of you with a path going north and south",
         (14, 1): "There is a wall to the north, south, and west of you with a path going east",
-        (14, 2): "There is a wall to the east of you with a path going north and south. You can see a cheerful merchant to your west.",
-        (14, 4): "There is a wall to the west and east of you with a path going north and south",
-        (14, 14): "There is a wall to the north, south, and west of you with a path going east",
+        (14, 2): "There is a wall to the east of you with a path going north and south. You can see a cheerful merchant to your west",
+        (14, 4): "There is a wall to the west and east of you with a path going south and you can see a skeleton to your north",
+        (14, 14): "You are at a dead end with a path going east",
         (14, 15): "There is a wall to the north and south of you with a path going east and west",
         (14, 16): "There is a wall to the south and east of you with a path going north and west",
         (14, 18): "There is a wall to the west and east of you with a path going north and south",
         (15, 2): "There is a wall to the west and east of you with a path going north and south",
         (15, 4): "There is a wall to the west and east of you with a path going north and south",
-        (15, 6): "There is a wall to the north, west, and east of you with a path going south",
+        (15, 6): "You are at a dead end with a path going south",
         (15, 8): "There is a wall to the north, west, and east of you with a path going south",
-        (15, 10): "There is a wall to the north, south, and west of you with a path going east",
+        (15, 10): "You are at a dead end with a path going east",
         (15, 11): "There is a wall to the north and south of you with a path going east and west",
         (15, 12): "There is a wall to the north and east of you with a path going south and west",
         (15, 18): "There is a wall to the west and east of you with a path going north and south",
@@ -194,14 +279,14 @@ def Zork_2():
         (16, 4): "There is a wall to the west of you with a path going north, south, and east",
         (16, 5): "There is a wall to the north and south of you with a path going east and west",
         (16, 6): "There is a wall to the east of you with a path going north, south, and west",
-        (16, 8): "There is a wall to the west and east of you with a path going north and south",
+        (16, 8): "There is a wall to the west and east of you with a path going south and you can see a room to your north",
         (16, 12): "There is a wall to the west of you with a path going north, south, and east",
         (16, 13): "There is a wall to the north and south of you with a path going east and west",
         (16, 14): "There is a wall to the north of you with a path going east, and west. You can see an old imprisoned man to your south.",
         (16, 15): "There is a wall to the north and south of you with a path going east and west",
-        (16, 16): "There is a wall to the north of you with a path going south, east, and west",
+        (16, 16): "There is a wall to the north of you with a path going east and west and you can see an empty prison cell to your south",
         (16, 17): "There is a wall to the north and south of you with a path going east and west",
-        (16, 18): "There is a wall to the east of you with a path going north, south, and west",
+        (16, 18): "There is a wall to the east of you with a path going northand west and you can see an empty prison cell to your south",
         (17, 1): "There is a wall to the west and east of you with a path going north and south",
         (17, 4): "There is a wall to the west and east of you with a path going north and south",
         (17, 6): "There is a wall to the west and east of you with a path going north and south",
@@ -209,8 +294,8 @@ def Zork_2():
         (17, 11): "There is a wall to the north and west of you with a path going south and east",
         (17, 12): "There is a wall to the south and east of you with a path going north and west",
         (17, 14): "There is a wall to the west and east of you with a path going north and south",
-        (17, 16): "There is a wall to the south, west, and east of you with a path going north",
-        (17, 18): "There is a wall to the south, west, and east of you with a path going north",
+        (17, 16): "You are in prison cell #2 with a old skeleton on the hay bed, to leave go north",
+        (17, 18): "You are in an prison cell #1 with a journal on a rusty table, to leave go north",
         (18, 1): "There is a wall to the south and west of you with a path going north and east",
         (18, 2): "There is a wall to the north and south of you with a path going east and west",
         (18, 3): "There is a wall to the north and south of you with a path going east and west",
@@ -220,7 +305,7 @@ def Zork_2():
         (18, 9): "There is a wall to the north and south of you with a path going east and west",
         (18, 10): "There is a wall to the north and south of you with a path going east and west",
         (18, 11): "There is a wall to the south and east of you with a path going north and west",
-        (18, 14): "There is a wall to the south, west, and east of you with a path going north",
+        (18, 14): "You are in prison cell #3, the place that William spent most of his life, to leave go north",
     }
 
     RoomItems = {
@@ -238,10 +323,12 @@ def Zork_2():
         (1, 18): ["cheese"],
         (1, 8): ["bread","cheese"],
         (9, 14): ["bread","bandage"],
+        (17, 16): ["gruel"],
 
         (5, 0): ["letter"],  # West entrance
         (15, 10): ["note"], #note that says time 
         (17, 18): ["torn journal"],
+        (17,16): ["diary"],
         
         (3, 1): ["sign"],
         (9, 12): ["final sign"],
@@ -312,7 +399,7 @@ def Zork_2():
             print(f"Health remaining: {PlayerHealth} health")
             
             if PlayerHealth <= 0:
-                print("\nThe trap was fatal...")
+                print("\nThe trap was fatal")
                 PlayerHealth = 0
             
             return True
@@ -342,25 +429,11 @@ def Zork_2():
         for char in text:
             sys.stdout.write(char)
             sys.stdout.flush()
-            if char in ":!":
+            if char in ":":
                 time.sleep(2)
             else:
                 time.sleep(delay)
         print()
-
-    def get_adjacent_shops(row, col):
-        shops_found = []
-        if (row, col) in shop:
-            shops_found.append(("next", row, col))
-        if row > 0 and (row-1, col) in shop:
-            shops_found.append(("north", row-1, col))
-        if row < len(Maze)-1 and (row+1, col) in shop:
-            shops_found.append(("south", row+1, col))
-        if col < len(Maze[0])-1 and (row, col+1) in shop:
-            shops_found.append(("east", row, col+1))
-        if col > 0 and (row, col-1) in shop:
-            shops_found.append(("west", row, col-1))
-        return shops_found
 
     def handle_shop_interaction(shop, shop_row, shop_col):
         nonlocal PlayerHealth
@@ -479,42 +552,42 @@ def Zork_2():
             "name": "Minotaur",
             "description": "A fitting enemy for the labyrinth",
             "dead": False,
-            "requirement": "You need >= 90 and a mace",
+            "requirement": "Recommendation: >= 90 health and a mace or stronger",
             "loot": [],
         },
         (8, 1): {
             "name": "Troll", #done
             "description": "A troll with a mace in a maze",
             "dead": False,
-            "requirement": "You need >= 70 and a sword",
+            "requirement": "Recommendation: >= 70 health and a sword or stronger",
             "loot": ["mace","coin","coin","coin","coin","coin"],
         },
         (5, 7): { #done
             "name": "Brute",
             "description": "A large (but rather dumb looking) beast holding a gleaming sword",
             "dead": False,
-            "requirement": "You need >= 60 and a spear",
+            "requirement": "Recommendation: >= 60 health and a spear or stronger",
             "loot": ["sword","coin","coin","coin","coin"],
         },
         (13, 10): { #done
             "name": "Goblin",
             "description": "Human looking green man with a custom made spear",
             "dead": False,
-            "requirement": "You need >= 50 and a rusty dagger",
+            "requirement": "Recommendation: >= 50 health and a rusty dagger or stronger",
             "loot": ["spear","coin","coin","coin"],
         },
         (13, 4): { # done
             "name": "Skeleton",
             "description": "A bony creature made of bones holding a beating up dagger",
             "dead": False,
-            "requirement": "You need >= 50 and a rock",
+            "requirement": "Recommendation: >= 50 health and a rock or stronger",
             "loot": ["rusty dagger","coin","coin"],
         },
         (2, 18): { #done
             "name": "Giant Rat",
             "description": "A large pest the size of a panther",
             "dead": False,
-            "requirement": "You need >= 40 and a rock",
+            "requirement": "Recommendation: >= 40 health and a rock or stronger",
             "loot": ["coin"],
         }
     }
@@ -526,6 +599,26 @@ def Zork_2():
             return RoomDescriptions[pos]
 
         return "A nondescript part of the maze."
+
+    def get_enemy_name():
+        nonlocal row,col
+        nonlocal enemy_pos
+
+        enemy_pos = (row - 1, col)
+        if enemy_pos in enemies and not enemies[enemy_pos]["dead"]:
+            print(f"{enemies[enemy_pos]['requirement']}")
+        enemy_pos = (row + 1, col)
+        enemy_pos = (row + 1, col)
+        if enemy_pos in enemies and not enemies[enemy_pos]["dead"]:
+            print(f"{enemies[enemy_pos]['requirement']}")
+        enemy_pos = (row, col + 1)
+        enemy_pos = (row, col + 1)
+        if enemy_pos in enemies and not enemies[enemy_pos]["dead"]:
+            print(f"{enemies[enemy_pos]['requirement']}")
+        enemy_pos = (row, col - 1)
+        enemy_pos = (row, col - 1)
+        if enemy_pos in enemies and not enemies[enemy_pos]["dead"]:
+            print(f"{enemies[enemy_pos]['requirement']}")
 
     Doors = {
         (2, 1): {"locked": True, "key_needed": "door_1", "description": "A worn down door"}, #door in the top left (west entrance) key coords [4,3]
@@ -555,23 +648,36 @@ def Zork_2():
     """,
             "grabbable": True,
             "readable": True,
-            "weight": 2
         },
         "note": {
             "description": "A wrangled old note",
             "text": "time",
             "grabbable": True,
             "readable": True,
-            "weight": 1
+        },
+        "diary": {
+            "description": "A hardback diary with a broken padlock",
+            "text": """
+        Dear Diary,
+            
+        It is currently Day 35 of me being trapped here,
+        none of us know how we got here but we are starving
+        and i dont know how long ill make it,
+        Marcus has been here for much longer than i have
+        around 10 more days he says but time goes so fast here that you can barely tell
+        Hopefully someone will come to rescue us but im losing it.
+            
+            - Henry""",
+            "grabbable": True,
+            "readable": True,
         },
         "torn journal": {
             "description": "A partially destroyed journal",
             "text": """
-            Day 47: The others are gone. I'm the last one left.
-            I think they left me here to die... they havent came with 
-            food for the past 3 days, I am being made to die a slow death...
-            - Marcus
-            """,
+        Day 47: The others are gone. I'm the last one left.
+        I think they left me here to die... they havent came with 
+        food for the past 3 days, I am being made to die a slow death...
+            - Marcus""",
             "grabbable": True,
             "readable": True,
         },
@@ -580,7 +686,6 @@ def Zork_2():
             "text": "You need a brass key for this door",
             "grabbable": False,
             "readable": True,
-            "weight": 0
         },
         "crossroad sign": {
             "description": "A old wooden sign",
@@ -592,7 +697,6 @@ def Zork_2():
     """,
             "grabbable": False,
             "readable": True,
-            "weight": 0
         },
         "prison sign": {
             "description": "A metal sign with letters etched into it",
@@ -604,7 +708,6 @@ def Zork_2():
     """,
             "grabbable": False,
             "readable": True,
-            "weight": 0
         },
         "danger sign": {
             "description": "A warning sign",
@@ -615,14 +718,12 @@ def Zork_2():
     ===============================""",
             "grabbable": False,
             "readable": True,
-            "weight": 0
         },
         "final sign": {
             "description": "The final sign",
             "text": "Gold key needed for this door",
             "grabbable": False,
             "readable": True,
-            "weight": 0
         },
         #Keys
         "brass key": {
@@ -630,7 +731,6 @@ def Zork_2():
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3,
             "opens": "door_1"  # Opens the door in the top left 
         },
         "gold key": {
@@ -638,7 +738,6 @@ def Zork_2():
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3,
             "opens": "door_2"  # Opens tha door that leads to the boss fight
         },
         "copper key": {
@@ -646,7 +745,6 @@ def Zork_2():
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3,
             "opens": "door_3"  # Opens the door in the top right that splits the path
         },
         "iron key": {
@@ -654,44 +752,38 @@ def Zork_2():
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3,
             "opens": "door_4"  # Opens the door for the man to escape
         },
         #Weapons
         "mace": { #strongest, needed to kill the minotaur
-            "description": "A mean looking mace with spikes coming out of it",
+            "description": "A mean looking mace | DMG: 20 - 30",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 10
         },
         "sword": { #2nd strongest, needed to kill the troll
-            "description": "A gleaming sword",
+            "description": "A gleaming sword | DMG: 15 - 25",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 8
         },
         "spear": { #3rd strongest, needed to kill the brute
-            "description": "A hardwood pole with a iron spike on the end",
+            "description": "A hardwood pole with a iron spike on the end | DMG: 12 - 20",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 7
         },
         "rusty dagger": { #4th strongest, needed to kill the goblin
-            "description": "A dodgy looking dagger",
+            "description": "A dodgy looking dagger | DMG: 8 - 15",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 5
         },
         "rock": { #5th strongest, needed to kill the giant rat and skeleton
-            "description": "A sharp rock that looks like it could do some damage",
+            "description": "A sharp rock | DMG: 5 - 10",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3,
         },
         #Others 
         "bread": {
@@ -702,40 +794,69 @@ def Zork_2():
             "weight": 3
         },
         "bandage": {
-            "description": "A nice length of bandage to heal bones and wounds | Restores 50 health",
+            "description": "A nice length of bandage to heal wounds | Restores 50 health",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 5
         },
         "cheese": {
             "description": "Slightly mouldy cheese | Restores 20 health",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 3
         },
         "gruel": {
             "description": "A small nasty looking bowl of gruel | Restores 10 health",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 2
         },
         "coin": {
             "description": "A golden currency used to trade",
             "text": None,
             "grabbable": True,
             "readable": False,
-            "weight": 1
         }
     }
 
     def get_inventory_weight():
         total_weight = 0
-        for item in PlayerInventory:
-            if "weight" in Items[item]:
-                total_weight += Items[item]["weight"]
+        if "mace" in PlayerInventory:
+            total_weight += 10
+        if "sword" in PlayerInventory:
+            total_weight += 8
+        if "spear" in PlayerInventory:
+            total_weight += 7     
+        if "rusty dagger" in PlayerInventory:
+            total_weight += 5    
+        if "rock" in PlayerInventory:
+            total_weight += 3        
+        if "bandage" in PlayerInventory:
+            total_weight += 5        
+        if "bread" in PlayerInventory:
+            total_weight += 3        
+        if "cheese" in PlayerInventory:
+            total_weight += 2        
+        if "gruel" in PlayerInventory:
+            total_weight += 1        
+        if "letter" in PlayerInventory:
+            total_weight += 2        
+        if "note" in PlayerInventory:
+            total_weight += 1        
+        if "torn journal" in PlayerInventory:
+            total_weight += 2        
+        if "gold key" in PlayerInventory:
+            total_weight += 3        
+        if "brass key" in PlayerInventory:
+            total_weight += 3        
+        if "copper key" in PlayerInventory:
+            total_weight += 3        
+        if "iron key" in PlayerInventory:
+            total_weight += 3        
+        if "coin" in PlayerInventory:
+            total_weight += 1 
+        if "diary" in PlayerInventory:
+            total_weight += 2        
         return total_weight
 
     NPCs = {
@@ -769,16 +890,6 @@ def Zork_2():
         frames = [".  ", ".. ", "..."]
         for i in range(9):
             print(f"\rPrisoner: {frames[i % 3]}", end="", flush=True)
-            time.sleep(0.4)
-        sys.stdout.write("\033[F")  
-        sys.stdout.write("\033[K")  
-        sys.stdout.write("\033[1B")
-        sys.stdout.flush()
-
-    def player_dot_cycling():
-        frames = [".  ", ".. ", "..."]
-        for i in range(9):
-            print(f"\rYou: {frames[i % 3]}", end="", flush=True)
             time.sleep(0.4)
         sys.stdout.write("\033[F")  
         sys.stdout.write("\033[K")  
@@ -960,9 +1071,9 @@ def Zork_2():
             "Minotaur": {"health": 80, "damage": (20, 35), "weapon_needed": "mace"},
             "Troll": {"health": 60, "damage": (12, 25), "weapon_needed": "sword"},
             "Brute": {"health": 50, "damage": (10, 20), "weapon_needed": "spear"},
-            "Goblin": {"health": 35, "damage": (8, 15), "weapon_needed": "rusty dagger"},
-            "Skeleton": {"health": 30, "damage": (5, 12), "weapon_needed": "rock"},
-            "Giant Rat": {"health": 20, "damage": (3, 8), "weapon_needed": "rock"},
+            "Goblin": {"health": 40, "damage": (8, 15), "weapon_needed": "rusty dagger"},
+            "Skeleton": {"health": 40, "damage": (5, 12), "weapon_needed": "rock"},
+            "Giant Rat": {"health": 30, "damage": (3, 8), "weapon_needed": "rock"},
         }
         
         stats = enemy_stats.get(enemy["name"], {"health": 25, "damage": (5, 15), "weapon_needed": "rock"})
@@ -974,8 +1085,8 @@ def Zork_2():
             william_bonus = random.randint(3, 8)
             william_bonus = william_bonus * william_multi
             print("William fights alongside you!")
-            time.sleep(0.5)
-        
+            time.sleep(1)
+        time.sleep(1.5)
         print(f"\n{enemy['name']} Health: {enemy_health}")
         print(f"Your Health: {PlayerHealth}")
         print(f"Your Weapon: {weapon_used} (Damage: {player_damage})")
@@ -984,8 +1095,9 @@ def Zork_2():
         
         turn = 1
         while enemy_health > 0 and PlayerHealth > 0:
-            print(f"\n--- Turn {turn} ---")
-            time.sleep(0.5)
+            time.sleep(2)
+            print(f"--- Turn {turn} ---\n")
+            time.sleep(1)
             
             total_damage = player_damage + william_bonus
             enemy_health -= total_damage
@@ -995,19 +1107,19 @@ def Zork_2():
             if enemy_health <= 0:
                 enemy_health = 0
                 print(f"\nThe {enemy['name']} has been defeated!")
-                time.sleep(2)
+                time.sleep(1.5)
                 break
             
             print(f"{enemy['name']} Health: {enemy_health}")
-            time.sleep(2)
+            time.sleep(1.5)
             
             enemy_damage = random.randint(enemy_min_damage, enemy_max_damage)
             
-            print(f"The {enemy['name']} attacks you for {enemy_damage} damage!")
+            print(f"\nThe {enemy['name']} attacks you for {enemy_damage} damage!")
 
             PlayerHealth -= enemy_damage
 
-            print(f"Your Health: {PlayerHealth}")
+            print(f"Your Health: {PlayerHealth}\n")
             
             if PlayerHealth <= 20 and PlayerHealth > 0:
                 print("Your health is low!")
@@ -1072,7 +1184,7 @@ def Zork_2():
             print(f"\n{'='*50}")
             typewriter(f"Victory! The {enemy['name']} has been slain!")
             print(f"{'='*50}")
-            
+            time.sleep(2)
             enemy["dead"] = True
             enemy["name"] = f"Dead {enemy['name']}"
             Maze[enemy_row][enemy_col] = 0
@@ -1082,7 +1194,7 @@ def Zork_2():
                 if pos not in RoomItems:
                     RoomItems[pos] = []
                 RoomItems[pos].extend(enemy["loot"])
-                print(f"The {enemy['name']} dropped: {', '.join(enemy['loot'])}")
+                print(f"\nThe {enemy['name']} dropped: {', '.join(enemy['loot'])}")
             
             row = enemy_row
             col = enemy_col
@@ -1132,12 +1244,35 @@ def Zork_2():
             adjacent.append(("west", row, col - 1))
         return adjacent
 
-    print("""\n
+    filename = "zork_save_file.txt"
+
+    def read_specific_line(filename, target_line):
+        with open(filename, 'r') as file:
+            for line_num, line in enumerate(file, 1):
+                if line_num == target_line:
+                    return line.strip()
+        return None
+
+    def read_lines_from(filename, start_line):
+        lines = []
+        with open(filename, 'r') as file:
+            for line_num, line in enumerate(file, 1):
+                if line_num >= start_line:
+                    lines.append(line.strip())
+        return lines
+
+    subprocess.run('cls', shell=True)
+
+    print("""
     West side of the maze
     There is a lonely letter left on the ground""")
     #----------------------------------------------------------------------------------------------------------------------------------
     while True:
+        elapsed_seconds = time.time() - start_time
         stepCount += 1
+        # print(PlayerPos)
+        # print(PlayerInventory)
+        # print(RoomItems)
         if PlayerHealth == 0:
             print("You have lost all of your health and died! Game Over!")
             lost += 1
@@ -1440,8 +1575,8 @@ def Zork_2():
             elif PlayerInput == "inventory" or PlayerInput == "i":
                 if PlayerInventory:
                     current_weight = get_inventory_weight()
-                    print(f"You are carrying ({current_weight}/{MAX_WEIGHT} weight):")
-                    print(", ".join(PlayerInventory))
+                    print("You are carrying:", ", ".join(PlayerInventory))
+                    print(f"{current_weight}/{MAX_WEIGHT} weight")
                 else:
                     print("You are not carrying anything")
 
@@ -1494,7 +1629,7 @@ def Zork_2():
                 elif Items[item]["grabbable"]:
                     RoomItems[pos].remove(item)
                     PlayerInventory.append(item)
-                    print(f"You picked up the {item} (weight: {item_weight})")
+                    print(f"You picked up the {item}")
                     print(f"Total weight: {get_inventory_weight()}/{MAX_WEIGHT}")
                     if not RoomItems[pos]:
                         del RoomItems[pos]
@@ -1575,7 +1710,7 @@ def Zork_2():
             PlayerInput = input("\n>").lower().strip()
             if PlayerInput in PlayerInventory:
                 if Items[PlayerInput]["readable"]:
-                    print(f'"{Items[PlayerInput]["text"]}"')
+                    print(f'{Items[PlayerInput]["text"]}')
                 else:
                     print(f"You can't read the {PlayerInput}!")
             else:
@@ -1584,7 +1719,7 @@ def Zork_2():
                 if pos in RoomItems and PlayerInput in RoomItems[pos]:
                     if Items[PlayerInput]["readable"]:
                         print(f"You read the {PlayerInput}:")
-                        print(f'"{Items[PlayerInput]["text"]}"')
+                        print(f'{Items[PlayerInput]["text"]}')
                     else:
                         print(f"You can't read the {PlayerInput}!")
                 else:
@@ -1604,6 +1739,7 @@ def Zork_2():
 
         elif PlayerInput == "fight":
             print("Are you sure you want to fight?")
+            get_enemy_name()
             PlayerInput = input("\n>").lower().strip()
             if PlayerInput == "yes":
                 nearby_enemies = get_adjacent_enemies(row, col)
@@ -1625,32 +1761,84 @@ def Zork_2():
             if PlayerInput in PlayerInventory:
 
                 if PlayerInput == "bread":
-                    PlayerHealth += 30
-                    if PlayerHealth > 100:
-                        PlayerHealth = 100
-                    PlayerInventory.remove("bread")
-                    print("You just gained 30 health, you now have", PlayerHealth, "health")
+                    if PlayerHealth == 100:
+                        print("You have 100 health already")
+                    elif PlayerHealth + 30 > 100:
+                        waste = PlayerHealth + 30 - 100
+                        print(f"If you use the bread, you will waste {waste} health points, are you sure you want to use it?")
+                        PlayerInput = input("\n>").lower().strip()
+                        if PlayerInput == "yes":
+                            PlayerInventory.remove("bread")
+                            PlayerHealth = 100
+                            print("You now have 100 health")
+                        elif PlayerInput == "no":
+                            print("You decided to not eat your bread")
+                        else:
+                            print("Please answer with a (yes / no)")
+                    else:
+                        PlayerHealth += 30
+                        PlayerInventory.remove("bread")
+                        print("You just gained 30 health, you now have", PlayerHealth, "health")
 
                 elif PlayerInput == "bandage":
-                    PlayerHealth += 50
-                    if PlayerHealth > 100:
-                        PlayerHealth = 100
-                    PlayerInventory.remove("bandage")
-                    print("You just gained 50 health, you now have", PlayerHealth, "health")
+                    if PlayerHealth == 100:
+                        print("You already have 100 health already")
+                    elif PlayerHealth + 50 > 100:
+                        waste = PlayerHealth + 50 - 100
+                        print(f"If you use the bread, you will waste {waste} health points, are you sure you want to use it?")
+                        PlayerInput = input("\n>").lower().strip()
+                        if PlayerInput == "yes":
+                            PlayerInventory.remove("bandage")
+                            PlayerHealth = 100
+                            print("You now have 100 health")
+                        elif PlayerInput == "no":
+                            print("You decided to not use your bandage")
+                        else:
+                            print("Please answer with a (yes / no)")
+                    else:
+                        PlayerHealth += 50
+                        PlayerInventory.remove("bandage")
+                        print(f"You just gained 50 health, you now have {PlayerHealth} health")
 
                 elif PlayerInput == "cheese":
-                    PlayerHealth += 20
-                    if PlayerHealth > 100:
-                        PlayerHealth = 100
-                    PlayerInventory.remove("cheese")
-                    print("You just gained 20 health, you now have", PlayerHealth, "health")
+                    if PlayerHealth == 100:
+                        print("You already have 100 health already")
+                    elif PlayerHealth + 20 > 100:
+                        waste = PlayerHealth + 20 - 100
+                        print(f"If you use the bread, you will waste {waste} health points, are you sure you want to use it?")
+                        PlayerInput = input("\n>").lower().strip()
+                        if PlayerInput == "yes":
+                            PlayerInventory.remove("cheese")
+                            PlayerHealth = 100
+                            print("You now have 100 health")
+                        elif PlayerInput == "no":
+                            print("You decided to not use your cheese")
+                        else:
+                            print("Please answer with a (yes / no)")
+                    else:
+                        PlayerHealth += 20
+                        PlayerInventory.remove("cheese")
+                        print(f"You just gained 20 health, you now have {PlayerHealth} health")
 
                 elif PlayerInput == "gruel":
-                    PlayerHealth += 10
-                    if PlayerHealth > 100:
-                        PlayerHealth = 100
-                    PlayerInventory.remove("gruel")
-                    print("You just gained 10 health, you now have", PlayerHealth, "health")
+                    if PlayerHealth == 100:
+                        print("You already have 100 health already")
+                    elif PlayerHealth + 10 > 100:
+                        waste = PlayerHealth + 10 - 100
+                        print(f"If you use the bread, you will waste {waste} health points, are you sure you want to use it?")
+                        PlayerInput = input("\n>").lower().strip()
+                        if PlayerInput == "yes":
+                            PlayerInventory.remove("gruel")
+                            PlayerHealth = 100
+                            print("You now have 100 health")
+                        elif PlayerInput == "no":
+                            print("You decided to not use your gruel")
+                        else:
+                            print("Please answer with a (yes / no)")
+                    else:
+                        PlayerHealth += 10
+                        PlayerInventory.remove("gruel")
+                        print(f"You just gained 10 health, you now have {PlayerHealth} health")
 
                 elif PlayerInput == "brass key":
                     adjacent_doors = get_adjacent_doors(row, col)
@@ -1839,20 +2027,33 @@ def Zork_2():
         fight - Allows you to fight enemies near you
         template - Gives you a template of the map of the maze
         map - Shows your current position in the maze
+        swing - Swings your weapon around
+        Jump - Mocks you for jumping and horsing around
+        @ - Shows you my email
         cheats - This will give you invincibility, all of the items to beat the game and prints you a map of the whole maze
+
+        save - Allows you to save your progress
+        restore - Typing this command will give the values of the previous save
+        clear - Clears the terminal for a more clean look 
+    
     Top tips:
+        
         Whenever you use an item, make sure you spell it EXACTLY the same as when you see it
+        
+        Your max health is 100
         
         The direction commands are shortened to the first letter, so;
             n - north
             s - south
             e - east
             w - west
-        This also applies to;
+        
+        This also applies to:
             i - inventory
             t - template
             h - health
-            """)
+
+    Kinda cool right?""")
 
         elif PlayerInput == "help":
             print("""
@@ -1895,22 +2096,26 @@ def Zork_2():
             print("You really thought i was going to give you all that? LOOOOOL Nice try")
 
         elif PlayerInput == "quit": #DONT CHANGE--------
-            print("Are you sure you want to quit?")
+            print("Are you sure? (Remember to save your progress!)")
             PlayerInput = input("\n>").lower().strip()
             if PlayerInput == "yes":
-                print("GoodBye! Hope you had fun!")
+                print("Ok, GoodBye! Hope you had fun!")
                 exit()
+            elif PlayerInput == "no":
+                print("Please save your progress using the 'save' command")
+            else:
+                print("Please answer with a yes or no")
+
+        elif PlayerInput == "restart":
+            print("Are you sure? (Remember to save your progress!)")
+            PlayerInput = input("\n>").lower().strip()
+            if PlayerInput == "yes":
+                subprocess.run('cls', shell=True)
+                Zork_2()
             elif PlayerInput == "no":
                 print("Then why ask? Wasting my damn time")
             else:
                 print("Please answer with a yes or no")
-
-        elif PlayerInput == "swear": #DONT CHANGE--------
-            RandomNumber = random.randint(1,2)
-            if RandomNumber == 1:
-                print("F*ck")
-            elif RandomNumber == 2:
-                print("Sh*t")
         
         elif PlayerInput == "map":
             print("Your map:")
@@ -1922,26 +2127,308 @@ def Zork_2():
                         print("?", end=" ")
                 print()
 
-        elif PlayerInput == "hello": #DONT CHANGE--------
-            print("Good day.")
-
-        elif PlayerInput == "what": #DONT CHANGE--------
-            print("What do you want to what is?")
-
-        elif PlayerInput == "where": #DONT CHANGE--------
-            print("Where do you want to where is?")
+        elif PlayerInput == "@":
+            print("verify.exe101@gmail.com")
 
         elif PlayerInput == "time": #DONT CHANGE--------
-            elapsed_seconds = time.time() - start_time
+
             minutes = int(elapsed_seconds // 60)
             seconds = int(elapsed_seconds % 60)
+
             if minutes == 0:
                 print(f"You have been playing for {seconds} seconds too long")
             else:
                 print(f"You have been playing for {minutes} minutes and {seconds} seconds too long")
 
+        # Commented the file save and restore as it might not work on other systems but im not sure about that, otherwise it does work on mine
+
+        # elif PlayerInput == "save":
+        #     with open(filename, 'w') as file:
+        #         file.write(f"{row}\n")
+        #         file.write(f"{col}\n")
+
+        #         door_pos = (2,1)
+        #         if Doors[door_pos]["locked"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         door_pos = (9,11)
+        #         if Doors[door_pos]["locked"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         door_pos = (6,16)
+        #         if Doors[door_pos]["locked"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         door_pos = (17,14)
+        #         if Doors[door_pos]["locked"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+                
+        #         npc_pos = (10,1)
+        #         if NPCs[npc_pos]["solved"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+
+        #         enemy_pos = (9, 10)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         enemy_pos = (8, 1)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         enemy_pos = (5, 7)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         enemy_pos = (13, 10)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         enemy_pos = (13, 4)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+        #         enemy_pos = (2, 18)
+        #         if enemies[enemy_pos]["dead"]:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+
+        #         if prisoner_dialogue_done == True:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+
+        #         if prisoner_dialogue_done2 == True:
+        #             file.write("True\n")
+        #         else:
+        #             file.write("False\n")
+
+        #         file.write(f"{elapsed_seconds}\n")
+
+        #         file.write("ROOM_ITEMS_START\n")
+        #         for pos, items in RoomItems.items():
+        #             if items:
+        #                 room_str = f"{pos[0]},{pos[1]}:{','.join(items)}\n"
+        #                 file.write(room_str)
+        #         file.write("ROOM_ITEMS_END\n")
+
+        #         file.write("INVENTORY_START\n")
+        #         for item in PlayerInventory:
+        #             file.write(f"{item}\n")
+        #         file.write("INVENTORY_END\n")
+        #     print("Progress saved")
+
+        # elif PlayerInput == "restore":
+
+        #     try:
+        #         with open(filename, "r") as file:
+        #             all_lines = file.readlines()
+        #             row = int(read_specific_line(filename, 1))
+        #             col = int(read_specific_line(filename, 2))
+        #             PlayerPos = row,col
+        #             RoomItems.clear()
+        #             current_section = None
+        #             inventory_started = False
+
+        #             door_pos = (2,1)
+        #             if read_specific_line(filename, 3) == "True":
+        #                 Doors[door_pos]["locked"] = True
+        #             else:
+        #                 Doors[door_pos]["locked"] = False
+        #             door_pos = (9,11)
+        #             if read_specific_line(filename, 4) == "True":
+        #                 Doors[door_pos]["locked"] = True
+        #             else:
+        #                 Doors[door_pos]["locked"] = False
+        #             door_pos = (6,16)
+        #             if read_specific_line(filename, 5) == "True":
+        #                 Doors[door_pos]["locked"] = True
+        #             else:
+        #                 Doors[door_pos]["locked"] = False
+        #             door_pos = (17,14)
+        #             if read_specific_line(filename, 6) == "True":
+        #                 Doors[door_pos]["locked"] = True
+        #             else:
+        #                 Doors[door_pos]["locked"] = False
+
+        #             npc_pos = (10,1)
+        #             if read_specific_line(filename, 7) == "True":
+        #                 NPCs[npc_pos]["solved"] = True
+        #             else:
+        #                 NPCs[npc_pos]["solved"] = False
+
+        #             enemy_pos = (9,10)
+        #             if read_specific_line(filename, 8) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+        #             enemy_pos = (8,1)
+        #             if read_specific_line(filename, 9) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+        #             enemy_pos = (5,7)
+        #             if read_specific_line(filename, 10) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+        #             enemy_pos = (13,10)
+        #             if read_specific_line(filename, 11) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+        #             enemy_pos = (13,4)
+        #             if read_specific_line(filename, 12) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+        #             enemy_pos = (2,18)
+        #             if read_specific_line(filename, 13) == "True":
+        #                 enemies[enemy_pos]["dead"] = True
+        #             else:
+        #                 enemies[enemy_pos]["dead"] = False
+
+        #             if read_specific_line(filename, 14) == "True":
+        #                 prisoner_dialogue_done = True
+        #             else:
+        #                 prisoner_dialogue_done = False
+
+        #             if read_specific_line(filename, 15) == "True":
+        #                 prisoner_dialogue_done2 = True
+        #             else:
+        #                 prisoner_dialogue_done2 = False
+
+        #             elapsed_seconds = float(read_specific_line(filename, 16))
+
+        #             for line in all_lines[16:]:
+        #                 line = line.strip()
+                        
+        #                 if line == "ROOM_ITEMS_START":
+        #                     current_section = "room_items"
+        #                     continue
+        #                 elif line == "ROOM_ITEMS_END":
+        #                     current_section = None
+        #                     continue
+        #                 elif line == "INVENTORY_START":
+        #                     current_section = "inventory"
+        #                     PlayerInventory.clear()
+        #                     continue
+        #                 elif line == "INVENTORY_END":
+        #                     current_section = None
+        #                     continue
+                        
+        #                 if current_section == "room_items" and line:
+        #                     if ":" in line:
+        #                         pos_str, items_str = line.split(":", 1)
+        #                         row_str, col_str = pos_str.split(",")
+        #                         pos = (int(row_str), int(col_str))
+        #                         items = items_str.split(",") if items_str else []
+        #                         if items:
+        #                             RoomItems[pos] = items
+                        
+        #                 elif current_section == "inventory" and line:
+        #                     PlayerInventory.append(line)
+                    
+        #             print("Progress restored from last save point")
+        #     except FileNotFoundError:
+        #         print("You need to save a file first")
+
+        # I commented this code out as i dont know what os you are using so it might glitch but it works on windows
+        
+        # elif PlayerInput == "clear":
+        #     print("Clearing the terminal is NOT recommended! Are you sure?")
+        #     PlayerInput = input("\n>").lower().strip()
+        #     if PlayerInput == "yes":
+        #         subprocess.run('cls', shell=True)
+        #     elif PlayerInput == "no":
+        #         print("Wasting my time..")
+        #     else:
+        #         print("Please reply with a (yes/no)")
+
+        #EASTER EGGS ========================================================
+        
         elif PlayerInput == "shout" or PlayerInput == "scream" or PlayerInput == "yell": #DONT CHANGE--------
             print("AAAARRRRRRRGGGGGHHHHhhhhh")
+
+        elif PlayerInput == "jump":
+            f = random.randint(1,5)
+            if f == 1:
+                print("Do you expect me to applaud?")            
+            if f == 2:
+                print("Have you tried hopping around the dungeon, too?")
+            if f == 3:
+                print("Are you enjoying yourself?")
+            if f == 4:
+                print("Very good, now you can go to the second grade")
+            if f == 5:
+                print("Wheeeeeeeeee!!!!!")
+
+        elif PlayerInput == "hello" or PlayerInput == "hi": #DONT CHANGE--------
+            print("Good day.")
+
+        elif PlayerInput == "lol":
+            print("What you laughing about?")
+
+        elif PlayerInput == "swear": #DONT CHANGE--------
+            RandomNumber = random.randint(1,2)
+            if RandomNumber == 1:
+                print("F*ck")
+            elif RandomNumber == 2:
+                print("Sh*t")
+
+        elif PlayerInput == "what": #DONT CHANGE--------
+            print("What do you want to what is?")
+
+        elif PlayerInput == "yes":
+            print("Yes what?")
+
+        elif PlayerInput == "no":
+            print("No what?")
+
+        elif PlayerInput == "where": #DONT CHANGE--------
+            print("Where do you want to where is?")
+
+        elif PlayerInput == "2010":
+            print("How do you know my birth year!?")
+
+        elif PlayerInput == "aron":
+            print("Thats me!")
+
+        elif PlayerInput == "verify.exe101@gmail.com":
+            print("Thats my email!")
+
+        elif PlayerInput == "bar":
+            print("Well, FOO, BAR, and BLETCH to you too!")
+
+        elif PlayerInput == "zork":
+            print("At your service!")
+
+        elif PlayerInput == "shut up":
+            print("Rude...")
+
+        elif PlayerInput == "escape" or PlayerInput == "win":
+            print("Im afraid youre going to have to do that yourself")
+
+        elif PlayerInput == "swing":
+            print("Swing what?")
+            PlayerInput = input("\n>").lower().strip()
+
+            if PlayerInput in PlayerInventory:
+                print("Swoosh!")
+            else:
+                print(f"You dont have a {PlayerInput}")
 
         elif PlayerInput == "":
             print("I beg your pardon?")
